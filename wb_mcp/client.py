@@ -735,35 +735,13 @@ class WBClient:
         return await self._get(self._analytics, "/api/analytics/v1/deductions", params)
 
 
-    async def search_report(self, date_from: str, date_to: str,
-                            nm_ids: list[int] | None = None,
-                            limit: int = 30, offset: int = 0) -> dict:
-        """POST /api/v2/search-report/report — отчёт по поисковым запросам (Джем).
-
-        КРИТИЧНО: видимость в поиске = продажи. Лимит 3/мин.
-        """
-        body: dict[str, Any] = {
-            "currentPeriod": {"start": date_from, "end": date_to},
-            "positionCluster": "all",
-            "includeSearchTexts": True, "includeSubstitutedSKUs": False,
-            "orderBy": {"field": "openCard", "mode": "desc"},
-            "limit": limit, "offset": offset,
-        }
-        if nm_ids:
-            body["nmIds"] = nm_ids
+    async def search_report(self, body: dict[str, Any]) -> dict:
+        """POST /api/v2/search-report/report — full Jam search analytics main page."""
         return await self._post(self._analytics, "/api/v2/search-report/report", body)
 
-
-    async def search_texts_by_product(self, nm_ids: list[int], date_from: str, date_to: str,
-                                      limit: int = 30) -> dict:
-        """POST /api/v2/search-report/product/search-texts — топ поисковых запросов по товарам (≤30)."""
-        return await self._post(self._analytics, "/api/v2/search-report/product/search-texts", {
-            "currentPeriod": {"start": date_from, "end": date_to},
-            "nmIds": nm_ids,
-            "topOrderBy": "openCard",
-            "orderBy": {"field": "avgPosition", "mode": "asc"},
-            "limit": limit,
-        })
+    async def search_texts_by_product(self, body: dict[str, Any]) -> dict:
+        """POST /api/v2/search-report/product/search-texts — full Jam query analytics by product."""
+        return await self._post(self._analytics, "/api/v2/search-report/product/search-texts", body)
 
 
     async def analytics_item_rating(self, nm_ids: list[int]) -> dict:
