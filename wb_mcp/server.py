@@ -45,7 +45,7 @@ from wb_mcp.client import WBClient
 
 # ─── Инициализация ────────────────────────────────────────
 
-app = Server("wb-mcp-server", version="2.6.1")
+app = Server("wb-mcp-server", version="2.7.0-readonly")
 
 DATA_DIR = Path(os.environ.get("DATA_DIR", "/data"))
 
@@ -158,13 +158,11 @@ TOOLS = [
           "Card details by nmID (карточка товара).",
           {"nm_ids": {"type": "array", "items": {"type": "integer"}, "description": "nmID list"}},
           ["nm_ids"]),
-    ,
     _tool("wb_cards_limits",
           "Card create/edit limits (лимиты карточек)."),
     _tool("wb_cards_trash",
           "Cards in trash (корзина).",
           {"limit": {"type": "integer", "default": 100}}),
-    ,
     _tool("wb_subjects_search",
           "Search WB subjects/categories for card creation (предметы, категории).",
           {"name": {"type": "string", "description": "search by name"},
@@ -181,8 +179,6 @@ TOOLS = [
           ["directory"]),
     _tool("wb_tags",
           "Seller tags for grouping cards (ярлыки, теги)."),
-    ,
-    ,
     _tool("wb_card_recommendations_get",
           "Recommended goods on a card, cross-sell (рекомендации).",
           {"nm_id": {"type": "integer"}},
@@ -243,7 +239,6 @@ TOOLS = [
            "limit": {"type": "integer", "default": 100, "description": "1-1000"},
            "offset": {"type": "integer", "default": 0}},
           ["promotion_id"]),
-    ,
 
     # === P0: ФИНАНСЫ И РЕАЛИЗАЦИЯ ===
     _tool("wb_finance_report",
@@ -299,8 +294,6 @@ TOOLS = [
           "Ad spend history for a period (затраты на рекламу).",
           {"date_from": {"type": "string", "description": "YYYY-MM-DD"}, "date_to": {"type": "string"}},
           ["date_from", "date_to"]),
-    ,
-    ,
     _tool("wb_advert_bids_recommendations",
           "Recommended bids for a card in a campaign (рекомендованные ставки).",
           {"nm_id": {"type": "integer"}, "advert_id": {"type": "integer"}},
@@ -325,7 +318,6 @@ TOOLS = [
           ["date_from", "date_to"]),
 
     # === КОНТЕНT: расширение ===
-    ,
     _tool("wb_categories_parent",
           "All parent product categories (родительские категории).",
           {"locale": {"type": "string", "description": "ru | en | zh, default ru"}}),
@@ -334,7 +326,6 @@ TOOLS = [
     _tool("wb_order_meta_get",
           "FBS order meta/marking; available keys come from the order's requiredMeta (маркировка заказа).",
           {"order_id": {"type": "integer"}}, ["order_id"]),
-    ,
     _tool("wb_orders_status_history",
           "Order status history, cross-border, max 100 (история статусов).",
           {"order_ids": {"type": "array", "items": {"type": "integer"}}}, ["order_ids"]),
@@ -359,11 +350,9 @@ TOOLS = [
           "Offices/warehouses that require a pass (офисы, пропуска)."),
     _tool("wb_passes_list",
           "Active warehouse passes (пропуска)."),
-    ,
     _tool("wb_supply_trbx_list",
           "Boxes (trbx) of an FBS supply (короба поставки).",
           {"supply_id": {"type": "string"}}, ["supply_id"]),
-    ,
     _tool("wb_supply_trbx_stickers",
           "Box QR stickers: svg|zplv|zplh|png (стикеры коробов).",
           {"supply_id": {"type": "string"}, "trbx_ids": {"type": "array", "items": {"type": "string"}},
@@ -392,7 +381,6 @@ TOOLS = [
     _tool("wb_dbs_order_meta_get",
           "DBS order meta (метаданные DBS).",
           {"order_id": {"type": "integer"}}, ["order_id"]),
-    ,
 
     # === CLICK-COLLECT: самовывоз ===
     _tool("wb_cc_orders_new", "New click-and-collect tasks (новые задания самовывоза)."),
@@ -414,7 +402,6 @@ TOOLS = [
     _tool("wb_cc_order_meta_get",
           "Click-and-collect task meta (метаданные самовывоза).",
           {"order_id": {"type": "integer"}}, ["order_id"]),
-    ,
 
     # === АНАЛИТИКА: расширение ===
     _tool("wb_analytics_brand_share",
@@ -482,7 +469,6 @@ TOOLS = [
           "Pinned feedbacks shown first on the card (закреплённые отзывы)."),
     _tool("wb_feedbacks_pins_count",
           "Pinned feedback count, limit 3 per nmID (число закреплённых)."),
-    ,
     _tool("wb_question_get",
           "One buyer question by ID (вопрос покупателя).",
           {"question_id": {"type": "string"}}, ["question_id"]),
@@ -614,7 +600,6 @@ TOOLS = [
           "FBS supply info (детали поставки).",
           {"supply_id": {"type": "string"}},
           ["supply_id"]),
-    ,
     _tool("wb_supply_barcode",
           "FBS supply QR code for warehouse handover (QR поставки).",
           {"supply_id": {"type": "string"}, "barcode_type": {"type": "string", "default": "png"}},
@@ -666,7 +651,6 @@ TOOLS = [
     # === P2: СКЛАДЫ И ПОСТАВКИ ===
     _tool("wb_warehouses",
           "Seller warehouses (склады продавца)."),
-    ,
     _tool("wb_supplies_list",
           "Supplies list (поставки)."),
     _tool("wb_stocks_get",
