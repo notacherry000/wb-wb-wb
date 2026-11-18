@@ -26,10 +26,10 @@ CORE = "core"
 RULES: tuple[tuple[str, str], ...] = (
     (CORE,        r"^wb_(list_shops|diagnostics|degradations|token_info|api_news|seller_info|seller_rating)$"),
     ("pricing",   r"^wb_(prices|promotion|promotions|tariffs)"),
-    ("ads",       r"^wb_(advert|search_report|search_texts)"),
+    ("ads",       r"^wb_advert"),
     ("catalog",   r"^wb_(cards|card|barcodes|media|subject|subjects|directory|tag|tags|brands|categories|banned)"),
     ("orders",    r"^wb_(orders|order|supply|supplies|dbs|cc|passes|pass|warehouse|warehouses|stocks|fbw|acceptance)"),
-    ("analytics", r"^wb_(analytics|nm_report|stats|search_table|search_product|jam)"),
+    ("analytics", r"^wb_(analytics|nm_report|stats|search_report|search_texts|search_table|search_product|jam)"),
     ("feedback",  r"^wb_(feedback|feedbacks|question|questions|returns|return|goods_return|chat|buyer|new_feedbacks)"),
     ("finance",   r"^wb_(finance|documents|document|deductions|paid_storage|users)"),
 )
@@ -39,10 +39,10 @@ ALL_PROFILES: tuple[str, ...] = tuple(dict.fromkeys(name for name, _ in RULES))
 DESCRIPTIONS = {
     CORE:        "магазины, диагностика, токен",
     "pricing":   "цены, акции, карантин, тарифы и комиссии",
-    "ads":       "рекламные кампании, ставки, кластеры, поисковые отчёты",
+    "ads":       "рекламные кампании, ставки и рекламные кластеры",
     "catalog":   "карточки, характеристики, медиа, ярлыки, блокировки",
     "orders":    "заказы FBS/DBS, самовывоз, поставки, склады, остатки",
-    "analytics": "воронки продаж, остатки, оборачиваемость, Джем-аналитика",
+    "analytics": "воронки продаж, лента заказов, поисковая аналитика WB Джем, CSV-отчёты, остатки и аналитика товаров",
     "feedback":  "отзывы, вопросы, возвраты, чаты с покупателями",
     "finance":   "финансовые отчёты, баланс, документы, удержания",
 }
