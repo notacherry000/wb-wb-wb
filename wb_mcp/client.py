@@ -641,6 +641,140 @@ class WBClient:
             "skipDeletedNm": skip_deleted_nm,
         })
 
+    async def analytics_paid_storage(self, date_from: str, date_to: str) -> Any:
+        """GET /api/v1/paid_storage (task-based) — отчёт по платному хранению.
+
+        КРИТИЧНО: товары с нулевыми продажами и высокой стоимостью хранения = прямые убытки.
+        """
+        return await self._task_report_flow(
+            "/api/v1/paid_storage", {"dateFrom": date_from, "dateTo": date_to}, "/api/v1/paid_storage",
+        )
+
+
+    async def analytics_warehouse_remains(self, group_by_nm: bool = True) -> Any:
+        """GET /api/v1/warehouse_remains (task-based) — отчёт об остатках на складах WB."""
+        params = {"groupByNm": str(group_by_nm).lower(), "groupBySize": "false"}
+        return await self._task_report_flow(
+            "/api/v1/warehouse_remains", params, "/api/v1/warehouse_remains",
+        )
+
+
+    async def analytics_antifraud(self, date: str) -> dict:
+        """GET /api/v1/analytics/antifraud-details — удержания за самовыкупы (отчёт по средам)."""
+        return await self._get(self._analytics, "/api/v1/analytics/antifraud-details", {"date": date})
+
+
+    async def analytics_stocks_wb(self, nm_ids: list[int] | None = None,
+                                  limit: int = 1000, offset: int = 0) -> dict:
+        """POST /api/analytics/v1/stocks-report/wb-warehouses — ТЕКУЩИЕ остатки на складах WB.
+
+        Замена устаревшего statistics /api/v1/supplier/stocks (удаляется 23.06.2026).
+        Обновление раз в 30 мин. Лимит 3/мин.
+        """
+        body: dict[str, Any] = {"limit": limit, "offset": offset}
+        if nm_ids:
+            body["nmIds"] = nm_ids
+        return await self._post(self._analytics, "/api/analytics/v1/stocks-report/wb-warehouses", body)
+
+
+    async def analytics_stocks_report(self, date_from: str, date_to: str,
+                                      nm_ids: list[int] | None = None,
+                                      limit: int = 100, offset: int = 0) -> dict:
+        """POST /api/v2/stocks-report/products/products — интерактивный отчёт по остаткам и оборачиваемости."""
+        body: dict[str, Any] = {
+            "currentPeriod": {"start": date_from, "end": date_to},
+            "stockType": "", "skipDeletedNm": True,
+            "orderBy": {"field": "avgOrders", "mode": "desc"},
+            "availabilityFilters": ["actual", "balanced", "deficient", "nonActual", "nonLiquid", "invisible"],
+            "limit": limit, "offset": offset,
+        }
+        if nm_ids:
+            body["nmIDs"] = nm_ids
+        return await self._post(self._analytics, "/api/v2/stocks-report/products/products", body)
+
+
+    async def analytics_excise_report(self, date_from: str, date_to: str) -> dict:
+        """POST /api/v1/analytics/excise-report — отчёт по маркировке (Честный знак). Лимит 10 за 5 ч."""
+        return await self._post_with_params(self._analytics, "/api/v1/analytics/excise-report",
+                                            params={"dateFrom": date_from, "dateTo": date_to}, body={})
+
+
+    async def analytics_acceptance_report(self, date_from: str, date_to: str) -> Any:
+        """GET /api/v1/acceptance_report (task-based) — отчёт по платной приёмке."""
+        return await self._task_report_flow(
+            "/api/v1/acceptance_report", {"dateFrom": date_from, "dateTo": date_to}, "/api/v1/acceptance_report",
+        )
+
+
+    async def analytics_banned_products(self, shadowed: bool = False) -> dict:
+        """GET /api/v1/analytics/banned-products/{blocked|shadowed} — заблокированные/скрытые карточки.
+
+        КРИТИЧНО: заблокированные и скрытые из каталога товары = потерянные продажи.
+        """
+        path = "shadowed" if shadowed else "blocked"
+        return await self._get(self._analytics, f"/api/v1/analytics/banned-products/{path}",
+                               {"sort": "nmId", "order": "asc"})
+
+
+    async def analytics_goods_return(self, date_from: str, date_to: str) -> dict:
+        """GET /api/v1/analytics/goods-return — возвраты товаров продавцу (макс. 31 день)."""
+        return await self._get(self._analytics, "/api/v1/analytics/goods-return",
+                               {"dateFrom": date_from, "dateTo": date_to})
+
+
+    async def analytics_deductions(self, date_to: str, date_from: str,
+                                   limit: int = 100, offset: int = 0) -> dict:
+        """GET /api/analytics/v1/deductions — удержания за подмены и неверные вложения.
+
+        dateFrom обязателен, хотя в документации помечен опциональным: без него WB
+        отвечает 400 «invalid parameter: dateTo» — проверено на живом кабинете.
+        """
+        params: dict[str, Any] = {
+            "dateFrom": date_from, "dateTo": date_to, "limit": limit, "offset": offset,
+        }
+        return await self._get(self._analytics, "/api/analytics/v1/deductions", params)
+
+
+    async def search_report(self, date_from: str, date_to: str,
+                            nm_ids: list[int] | None = None,
+                            limit: int = 30, offset: int = 0) -> dict:
+        """POST /api/v2/search-report/report — отчёт по поисковым запросам (Джем).
+
+        КРИТИЧНО: видимость в поиске = продажи. Лимит 3/мин.
+        """
+        body: dict[str, Any] = {
+            "currentPeriod": {"start": date_from, "end": date_to},
+            "positionCluster": "all",
+            "includeSearchTexts": True, "includeSubstitutedSKUs": False,
+            "orderBy": {"field": "openCard", "mode": "desc"},
+            "limit": limit, "offset": offset,
+        }
+        if nm_ids:
+            body["nmIds"] = nm_ids
+        return await self._post(self._analytics, "/api/v2/search-report/report", body)
+
+
+    async def search_texts_by_product(self, nm_ids: list[int], date_from: str, date_to: str,
+                                      limit: int = 30) -> dict:
+        """POST /api/v2/search-report/product/search-texts — топ поисковых запросов по товарам (≤30)."""
+        return await self._post(self._analytics, "/api/v2/search-report/product/search-texts", {
+            "currentPeriod": {"start": date_from, "end": date_to},
+            "nmIds": nm_ids,
+            "topOrderBy": "openCard",
+            "orderBy": {"field": "avgPosition", "mode": "asc"},
+            "limit": limit,
+        })
+
+
+    async def analytics_item_rating(self, nm_ids: list[int]) -> dict:
+        """POST /api/analytics/v1/item/rating — рейтинг товаров: просмотры, добавления в корзину, заказы.
+        [Джем] КРИТИЧНО: низкий рейтинг = проблема карточки или конкурент обошёл. Лимит ≤1000 nmID.
+        """
+        if len(nm_ids) > 1000:
+            nm_ids = nm_ids[:1000]
+        return await self._post(self._analytics, "/api/analytics/v1/item/rating", {"nmIds": nm_ids})
+
+
     async def analytics_sales_funnel_grouped_history(
         self, date_from: str, date_to: str,
         brand_names: list[str] | None = None,
