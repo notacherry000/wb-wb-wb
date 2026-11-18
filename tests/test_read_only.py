@@ -14,7 +14,7 @@ WRITE_TOOL_NAMES = {
     "wb_prices_b2b_set", "wb_promotions_add_products", "wb_promotion_exit",
     "wb_advert_create", "wb_advert_deposit", "wb_advert_pause", "wb_advert_start",
     "wb_advert_stop", "wb_advert_delete", "wb_advert_bids_set",
-    "wb_advert_cluster_bids", "wb_advert_rename", "wb_advert_minus_phrases",
+    "wb_advert_cluster_bids", "wb_advert_rename",
     "wb_cards_move_nm", "wb_card_add_nomenclature", "wb_media_upload_file",
     "wb_order_meta_set", "wb_order_meta_delete", "wb_pass_create", "wb_pass_update",
     "wb_pass_delete", "wb_supply_trbx_add", "wb_supply_trbx_delete",
