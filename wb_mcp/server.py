@@ -821,41 +821,25 @@ async def _h_card_errors(c, a): return await c.card_errors_list()
 async def _h_cards_list(c, a): return await c.cards_cursor_list(
     limit=a.get("limit", 100), cursor=a.get("cursor"), filter_params=a.get("filter"))
 async def _h_card_detail(c, a): return await c.card_detail(a["nm_ids"])
-async def _h_cards_update(c, a): return await c.cards_update(a["cards"])
-async def _h_cards_move_to_trash(c, a): return await c.cards_move_to_trash(a["nm_ids"])
-async def _h_cards_recover_from_trash(c, a): return await c.cards_recover_from_trash(a["nm_ids"])
 async def _h_cards_limits(c, a): return await c.cards_limits()
-async def _h_cards_create(c, a): return await c.cards_create(a["cards"])
 async def _h_cards_trash(c, a): return await c.cards_trash_list(limit=a.get("limit", 100))
-async def _h_barcodes_generate(c, a): return await c.barcodes_generate(a.get("count", 1))
-async def _h_media_upload(c, a): return await c.media_save_by_links(a["nm_id"], a["links"])
 async def _h_subjects_search(c, a): return await c.subjects_list(name=a.get("name"), limit=a.get("limit", 30))
 async def _h_subject_charcs(c, a): return await c.subject_charcs(a["subject_id"])
 async def _h_directory(c, a): return await c.directory_get(a["directory"], subject_id=a.get("subject_id"), search=a.get("search"))
 async def _h_tags(c, a): return await c.tags_list()
-async def _h_tag_link(c, a): return await c.tag_nomenclature_link(a["nm_id"], a["tag_ids"])
-async def _h_tag_create(c, a): return await c.tag_create(a["name"], color=a.get("color", "#FF0000"))
-async def _h_tag_update(c, a): return await c.tag_update(a["tag_id"], a["name"], a["color"])
-async def _h_tag_delete(c, a): return await c.tag_delete(a["tag_id"])
 async def _h_card_recommendations_get(c, a): return await c.card_recommendations_get(a["nm_id"])
-async def _h_card_recommendations_set(c, a): return await c.card_recommendations_set(a["nm_id"], a["recommended_nm_ids"])
 async def _h_brands_list(c, a): return await c.brands_list(subject_id=a.get("subject_id"))
 
 # ── Цены ──
 async def _h_prices_list(c, a): return await c.prices_list(
     limit=a.get("limit", 100), offset=a.get("offset", 0), filter_nm_id=a.get("filter_nm_id"))
-async def _h_prices_set(c, a): return await c.prices_set(a["data"])
 async def _h_prices_quarantine(c, a): return await c.prices_quarantine_list(
     limit=a.get("limit", 100), offset=a.get("offset", 0))
-async def _h_prices_club_discount(c, a): return await c.prices_club_discount_set(a["data"])
 async def _h_prices_upload_status(c, a):
     if a.get("details"):
         return await c.prices_upload_details(a["upload_id"], buffer=a.get("buffer", False))
     return await c.prices_upload_status(a["upload_id"], buffer=a.get("buffer", False))
 async def _h_prices_size_list(c, a): return await c.prices_size_list(a["nm_id"], limit=a.get("limit", 100))
-async def _h_prices_b2b_set(c, a): return await c.prices_b2b_set(a["data"])
-
-# ── Акции и автоакции ──
 async def _h_promotions_list(c, a): return await c.promotions_list(
     a["start"], a["end"], all_promo=a.get("all_promo", False),
     limit=a.get("limit", 100), offset=a.get("offset", 0), promo_type=a.get("promo_type"))
@@ -865,11 +849,6 @@ async def _h_promotions_audit(c, a): return await c.promotions_audit(
 async def _h_promotions_details(c, a): return await c.promotions_details(a["promotion_ids"])
 async def _h_promotions_products(c, a): return await c.promotions_nomenclatures(
     a["promotion_id"], in_action=a.get("in_action"), limit=a.get("limit", 100), offset=a.get("offset", 0))
-async def _h_promotions_add_products(c, a): return await c.promotions_upload(
-    a["promotion_id"], a["nm_ids"], upload_now=a.get("upload_now", True))
-async def _h_promotion_exit(c, a): return await c.promotions_exit(a["data"])
-
-# ── Финансы ──
 async def _h_finance_report(c, a): return await c.finance_realization_report(
     a["date_from"], a["date_to"], limit=a.get("limit", 500), rrd_id=a.get("rrd_id", 0))
 async def _h_finance_reports_list(c, a): return await c.finance_sales_reports_list(
@@ -887,43 +866,25 @@ async def _h_finance_acquiring_detailed(c, a): return await c.finance_acquiring_
 async def _h_advert_list(c, a): return await c.advert_list(
     ids=a.get("ids"), statuses=a.get("statuses"), payment_type=a.get("payment_type"))
 async def _h_advert_count(c, a): return await c.advert_count()
-async def _h_advert_create(c, a): return await c.advert_create(
-    a["name"], a["nm_ids"], bid_type=a.get("bid_type", "unified"),
-    payment_type=a.get("payment_type", "cpm"), placement_types=a.get("placement_types"))
 async def _h_advert_stats(c, a): return await c.advert_statistics(a["advert_ids"], a["date_from"], a["date_to"])
 async def _h_advert_balance(c, a): return await c.advert_balance()
 async def _h_advert_budget(c, a): return await c.advert_budget(a["advert_id"])
-async def _h_advert_deposit(c, a): return await c.advert_budget_deposit(a["advert_id"], a["amount"], source=a.get("source", 0))
 async def _h_advert_costs(c, a): return await c.advert_costs_history(a["date_from"], a["date_to"])
-async def _h_advert_pause(c, a): return await c.advert_pause(a["advert_id"])
-async def _h_advert_start(c, a): return await c.advert_start(a["advert_id"])
-async def _h_advert_stop(c, a): return await c.advert_stop(a["advert_id"])
-async def _h_advert_delete(c, a): return await c.advert_delete(a["advert_id"])
-async def _h_advert_bids_set(c, a): return await c.advert_bids_set(a["bids"])
 async def _h_advert_bids_recommendations(c, a): return await c.advert_bids_recommendations(a["nm_id"], a["advert_id"])
 async def _h_advert_clusters(c, a): return await c.advert_clusters_list(a["advert_id"])
 async def _h_advert_clusters_stats(c, a): return await c.advert_clusters_stats(
     a["advert_id"], a["date_from"], a["date_to"], nm_ids=a.get("nm_ids"), daily=a.get("daily", False))
-async def _h_advert_cluster_bids(c, a): return await c.advert_cluster_bids_set(a["bids"])
 async def _h_advert_minus_phrases(c, a):
     if a.get("norm_queries") is not None:
         return await c.advert_minus_phrases_set(a["advert_id"], a["nm_id"], a["norm_queries"])
     return await c.advert_minus_phrases_get(a["advert_id"], nm_id=a.get("nm_id"))
 async def _h_advert_payments(c, a): return await c.advert_payments(a["date_from"], a["date_to"])
-async def _h_advert_rename(c, a): return await c.advert_rename(a["advert_id"], a["name"])
 async def _h_advert_subjects(c, a): return await c.advert_subjects()
 async def _h_advert_available_nms(c, a): return await c.advert_available_nms(a["subject_ids"])
 
 # ── Контент: расширение ──
-async def _h_cards_move_nm(c, a): return await c.cards_move_nm(a["nm_ids"], target_imt=a.get("target_imt"))
-async def _h_card_add_nomenclature(c, a): return await c.card_add_nomenclature(a["imt_id"], a["cards_to_add"])
 async def _h_categories_parent(c, a): return await c.categories_parent(locale=a.get("locale", "ru"))
-async def _h_media_upload_file(c, a): return await c.media_upload_file(a["nm_id"], a["photo_number"], a["file_url"])
-
-# ── FBS: маркировка, пропуска, короба ──
 async def _h_order_meta_get(c, a): return await c.order_meta_get(a["order_id"])
-async def _h_order_meta_set(c, a): return await c.order_meta_set(a["order_id"], a["meta_type"], a["value"])
-async def _h_order_meta_delete(c, a): return await c.order_meta_delete(a["order_id"], a["key"])
 async def _h_orders_status_history(c, a): return await c.orders_status_history(a["order_ids"])
 async def _h_orders_client_info(c, a): return await c.orders_client_info(a["order_ids"])
 async def _h_supplies_reshipment(c, a): return await c.supplies_reshipment()
@@ -932,14 +893,7 @@ async def _h_orders_archive(c, a): return await c.orders_archive(a["date_from"],
 async def _h_supply_order_ids(c, a): return await c.supply_order_ids(a["supply_id"])
 async def _h_passes_offices(c, a): return await c.passes_offices()
 async def _h_passes_list(c, a): return await c.passes_list()
-async def _h_pass_create(c, a): return await c.pass_create(
-    a["first_name"], a["last_name"], a["car_model"], a["car_number"], a["office_id"])
-async def _h_pass_update(c, a): return await c.pass_update(
-    a["pass_id"], a["first_name"], a["last_name"], a["car_model"], a["car_number"], a["office_id"])
-async def _h_pass_delete(c, a): return await c.pass_delete(a["pass_id"])
 async def _h_supply_trbx_list(c, a): return await c.supply_trbx_list(a["supply_id"])
-async def _h_supply_trbx_add(c, a): return await c.supply_trbx_add(a["supply_id"], a["amount"])
-async def _h_supply_trbx_delete(c, a): return await c.supply_trbx_delete(a["supply_id"], a["trbx_ids"])
 async def _h_supply_trbx_stickers(c, a): return await c.supply_trbx_stickers(
     a["supply_id"], a["trbx_ids"], sticker_type=a.get("sticker_type", "png"))
 
@@ -950,23 +904,13 @@ async def _h_dbs_orders_status(c, a): return await c.dbs_orders_status(a["order_
 async def _h_dbs_orders_client(c, a): return await c.dbs_orders_client(a["order_ids"])
 async def _h_dbs_orders_delivery_date(c, a): return await c.dbs_orders_delivery_date(a["order_ids"])
 async def _h_dbs_groups_info(c, a): return await c.dbs_groups_info(a["group_ids"])
-async def _h_dbs_order_action(c, a): return await c.dbs_order_action(a["order_id"], a["action"], code=a.get("code"))
 async def _h_dbs_order_meta_get(c, a): return await c.dbs_order_meta_get(a["order_id"])
-async def _h_dbs_order_meta_set(c, a): return await c.dbs_order_meta_set(a["order_id"], a["meta_type"], a["value"])
-async def _h_dbs_order_meta_delete(c, a): return await c.dbs_order_meta_delete(a["order_id"], a["key"])
-
-# ── Click-collect ──
 async def _h_cc_orders_new(c, a): return await c.cc_orders_new()
 async def _h_cc_orders(c, a): return await c.cc_orders(a.get("limit", 100), a.get("next", 0), a["date_from"], a["date_to"])
 async def _h_cc_orders_status(c, a): return await c.cc_orders_status(a["order_ids"])
 async def _h_cc_orders_client(c, a): return await c.cc_orders_client(a["order_ids"])
 async def _h_cc_order_identity(c, a): return await c.cc_order_identity(a["order_code"], a["passcode"])
-async def _h_cc_order_action(c, a): return await c.cc_order_action(a["order_id"], a["action"])
 async def _h_cc_order_meta_get(c, a): return await c.cc_order_meta_get(a["order_id"])
-async def _h_cc_order_meta_set(c, a): return await c.cc_order_meta_set(a["order_id"], a["meta_type"], a["value"])
-async def _h_cc_order_meta_delete(c, a): return await c.cc_order_meta_delete(a["order_id"], a["key"])
-
-# ── Аналитика: расширение ──
 async def _h_analytics_brand_share(c, a): return await c.analytics_brand_share(
     a["parent_id"], a["brand"], a["date_from"], a["date_to"])
 async def _h_analytics_brand_share_brands(c, a): return await c.analytics_brand_share_brands()
@@ -993,8 +937,6 @@ async def _h_feedbacks_actions(c, a): return await c.feedbacks_actions(
 async def _h_feedbacks_archive(c, a): return await c.feedbacks_archive(take=a.get("take", 50), skip=a.get("skip", 0), nm_id=a.get("nm_id"))
 async def _h_feedbacks_pins(c, a): return await c.feedbacks_pins_list()
 async def _h_feedbacks_pins_count(c, a): return await c.feedbacks_pins_count()
-async def _h_feedbacks_pins_set(c, a): return await c.feedbacks_pins_set(a["feedback_ids"])
-async def _h_feedbacks_pins_delete(c, a): return await c.feedbacks_pins_delete(a["feedback_ids"])
 async def _h_question_get(c, a): return await c.question_get(a["question_id"])
 async def _h_feedback_order_return(c, a): return await c.feedback_order_return(a["feedback_id"])
 async def _h_feedbacks_count_period(c, a): return await c.feedbacks_count_period(
@@ -1054,17 +996,10 @@ async def _h_seller_rating(c, a): return await c.seller_rating()
 async def _h_orders_new(c, a): return await c.orders_new()
 async def _h_orders_list(c, a): return await c.orders_list(a["date_from"], date_to=a.get("date_to"), limit=a.get("limit", 100))
 async def _h_orders_status(c, a): return await c.orders_status(a["order_ids"])
-async def _h_order_cancel(c, a): return await c.order_cancel(a["order_id"])
 async def _h_orders_stickers(c, a): return await c.orders_stickers(
     a["order_ids"], sticker_type=a.get("sticker_type", "png"), width=a.get("width", 58), height=a.get("height", 40))
-async def _h_supply_create(c, a): return await c.supply_create(a["name"])
 async def _h_supply_detail(c, a): return await c.supply_detail(a["supply_id"])
-async def _h_supply_add_orders(c, a): return await c.supply_add_orders(a["supply_id"], a["order_ids"])
-async def _h_supply_deliver(c, a): return await c.supply_deliver(a["supply_id"])
 async def _h_supply_barcode(c, a): return await c.supply_barcode(a["supply_id"], barcode_type=a.get("barcode_type", "png"))
-async def _h_supply_delete(c, a): return await c.supply_delete(a["supply_id"])
-
-# ── Статистика ──
 async def _h_stats_sales(c, a): return await c.stats_sales(a["date_from"])
 async def _h_stats_orders(c, a): return await c.stats_orders(a["date_from"], flag=a.get("flag", 0))
 async def _h_stats_stocks(c, a): return await c.analytics_stocks_wb(nm_ids=a.get("nm_ids"), limit=a.get("limit", 100))
@@ -1073,29 +1008,17 @@ async def _h_stats_stocks(c, a): return await c.analytics_stocks_wb(nm_ids=a.get
 async def _h_feedbacks_list(c, a): return await c.feedbacks_list(
     is_answered=a.get("is_answered"), nm_id=a.get("nm_id"), take=a.get("take", 50))
 async def _h_feedbacks_count(c, a): return await c.feedbacks_count()
-async def _h_feedback_reply(c, a): return await c.feedback_reply(a["feedback_id"], a["text"], edit=a.get("edit", False))
 async def _h_questions_list(c, a): return await c.questions_list(
     is_answered=a.get("is_answered"), nm_id=a.get("nm_id"), take=a.get("take", 50))
 async def _h_questions_count(c, a): return await c.questions_count()
-async def _h_question_reply(c, a): return await c.question_reply(a["question_id"], a["text"], reject=a.get("reject", False))
-
-# ── Возвраты ──
 async def _h_returns_list(c, a): return await c.returns_claims(
     is_archive=a.get("is_archive", False), nm_id=a.get("nm_id"), limit=a.get("limit", 200))
-async def _h_return_answer(c, a): return await c.returns_claim_answer(a["claim_id"], a["action"], comment=a.get("comment"))
 async def _h_goods_return_report(c, a): return await c.analytics_goods_return(a["date_from"], a["date_to"])
 
 # ── Склады ──
 async def _h_warehouses(c, a): return await c.warehouses_list()
-async def _h_warehouse_create(c, a): return await c.warehouse_create(a["name"], address=a.get("address"))
-async def _h_warehouse_update(c, a): return await c.warehouse_update(a["warehouse_id"], name=a.get("name"), address=a.get("address"))
-async def _h_warehouse_delete(c, a): return await c.warehouse_delete(a["warehouse_id"])
 async def _h_supplies_list(c, a): return await c.supplies_list()
-async def _h_stocks_update(c, a): return await c.stocks_update(a["warehouse_id"], a["stocks"])
 async def _h_stocks_get(c, a): return await c.stocks_get(a["warehouse_id"], a["skus"])
-async def _h_stocks_delete(c, a): return await c.stocks_delete(a["warehouse_id"], a["skus"])
-
-# ── Поставки FBW ──
 async def _h_fbw_supplies(c, a): return await c.fbw_supplies_list(
     limit=a.get("limit", 100), offset=a.get("offset", 0), status_ids=a.get("status_ids"))
 async def _h_fbw_supply_detail(c, a): return await c.fbw_supply_detail(a["supply_id"])
@@ -1107,7 +1030,6 @@ async def _h_acceptance_coefficients(c, a): return await c.acceptance_coefficien
 # ── Обращения ──
 async def _h_buyer_chats(c, a): return await c.buyer_chats_list()
 async def _h_chat_events(c, a): return await c.buyer_chat_events(next_cursor=a.get("next_cursor"))
-async def _h_chat_send(c, a): return await c.buyer_chat_send(a["reply_sign"], a["message"])
 async def _h_chat_download(c, a): return await c.buyer_chat_download(a["file_id"])
 
 # ── Документы ──
