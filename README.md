@@ -10,12 +10,12 @@
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](pyproject.toml)
-[![MCP tools](https://img.shields.io/badge/MCP%20tools-139-orange.svg)](docs/tools.md)
+[![MCP tools](https://img.shields.io/badge/MCP%20tools-143-orange.svg)](docs/tools.md)
 [![PyPI](https://img.shields.io/pypi/v/wb-mcp-server.svg)](https://pypi.org/project/wb-mcp-server/)
 [![Transport](https://img.shields.io/badge/transport-stdio%20%7C%20SSE-lightgrey.svg)](#how-it-works)
 
 **Analyze your Wildberries seller data from an AI assistant.**
-139 read-only Seller API tools are exposed to Claude, ChatGPT, Codex and other MCP clients.
+143 read-only Seller API tools are exposed to Claude, ChatGPT, Codex and other MCP clients.
 The server cannot create, modify, or delete seller-account data.
 
 Selling on Ozon too? There is [the same server for Ozon](https://github.com/DeviceIngineering/ozon-mcp-server).
@@ -35,7 +35,7 @@ You: List new 5-star reviews and group them by product.
 
 ## What it can do
 
-**139 read-only Seller API tools.** The current catalogue is documented in [docs/tools.md](docs/tools.md). Complete public WB Jam read-only API coverage is documented in [docs/wb-jam-api.md](docs/wb-jam-api.md).
+**143 read-only Seller API tools.** The current catalogue is documented in [docs/tools.md](docs/tools.md). Complete public WB Jam read-only API coverage is documented in [docs/wb-jam-api.md](docs/wb-jam-api.md).
 
 Coverage includes product cards and catalogues, prices and upload history, promotions calendar, advertising campaigns and statistics, FBS/DBS/click & collect orders, supplies and stock, finance reports, tariffs, reviews and questions, returns, read-only buyer chat access, documents, sales and search analytics.
 
@@ -189,7 +189,7 @@ claude mcp list      # expected: wildberries ... ✔ Connected
 ## Multi-store and security
 
 **Several seller accounts.** Stores are added on `/shops`; each one gets its own `shop_id`.
-`wb_list_shops` returns the list, and 138 of the 139 tools take `shop_id` as their first
+`wb_list_shops` returns the list, and 142 of the 143 tools take `shop_id` as their first
 parameter (the exceptions are `wb_list_shops` and `wb_degradations`).
 With a single store the parameter can be omitted — the server substitutes the only one available.
 
