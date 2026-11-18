@@ -432,7 +432,7 @@ TOOLS = [
           ["body"]),
     _tool("wb_search_product_orders",
           "Orders and positions by search query for a product, ≤7 days. Requires Jam (заказы по запросам).",
-          {"nm_id": {"type": "integer"}, "search_texts": {"type": "array", "items": {"type": "string"}, "description": "1..30 queries"},
+          {"nm_id": {"type": "integer"}, "search_texts": {"type": "array", "items": {"type": "string"}, "description": "1..30 standard; up to 100 on Advanced/Premium Jam"},
            "date_from": {"type": "string"}, "date_to": {"type": "string"}},
           ["nm_id", "search_texts", "date_from", "date_to"]),
 
