@@ -131,19 +131,6 @@ class WBClient:
     async def _get(self, client: httpx.AsyncClient, path: str, params: dict | None = None) -> Any:
         return await self._send("GET", client, path, params=params)
 
-    async def _put(self, client: httpx.AsyncClient, path: str, body: dict | list | None = None) -> Any:
-        return await self._send("PUT", client, path, json_body=body if body is not None else {})
-
-    async def _patch(self, client: httpx.AsyncClient, path: str, body: dict | list | None = None) -> Any:
-        return await self._send("PATCH", client, path, json_body=body if body is not None else {})
-
-    async def _delete(self, client: httpx.AsyncClient, path: str, params: dict | None = None) -> Any:
-        return await self._send("DELETE", client, path, params=params)
-
-    # ═══════════════════════════════════════════════════════════
-    # CONTENT API — Карточки товаров
-    # ═══════════════════════════════════════════════════════════
-
     async def cards_cursor_list(
         self, limit: int = 100, cursor: dict | None = None,
         filter_params: dict | None = None,
@@ -1314,16 +1301,6 @@ class WBClient:
     async def new_feedbacks_questions(self) -> dict:
         """GET /api/v1/new-feedbacks-questions — флаги непросмотренных отзывов/вопросов."""
         return await self._get(self._feedbacks, "/api/v1/new-feedbacks-questions")
-
-    async def feedbacks_actions(self, feedback_id: str, feedback_valuation: int | None = None,
-                                product_valuation: int | None = None) -> Any:
-        """POST /api/v1/feedbacks/actions — жалоба на отзыв / проблема с товаром (коды из supplier-valuations)."""
-        body: dict[str, Any] = {"id": feedback_id}
-        if feedback_valuation is not None:
-            body["supplierFeedbackValuation"] = feedback_valuation
-        if product_valuation is not None:
-            body["supplierProductValuation"] = product_valuation
-        return await self._post(self._feedbacks, "/api/v1/feedbacks/actions", body)
 
     async def question_get(self, question_id: str) -> dict:
         """GET /api/v1/question?id= — один вопрос покупателя по ID."""
