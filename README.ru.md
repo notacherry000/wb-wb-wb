@@ -10,7 +10,7 @@
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](pyproject.toml)
-[![MCP tools](https://img.shields.io/badge/MCP%20tools-139-orange.svg)](docs/tools.md)
+[![MCP tools](https://img.shields.io/badge/MCP%20tools-143-orange.svg)](docs/tools.md)
 [![PyPI](https://img.shields.io/pypi/v/wb-mcp-server.svg)](https://pypi.org/project/wb-mcp-server/)
 [![Transport](https://img.shields.io/badge/transport-stdio%20%7C%20SSE-lightgrey.svg)](#как-это-устроено)
 
@@ -35,7 +35,7 @@
 
 ## Что умеет
 
-**139 инструментов только для чтения данных Seller API.** Полный актуальный перечень: [docs/tools.md](docs/tools.md). Отдельно описано полное покрытие публичного read-only API WB Джем: [docs/wb-jam-api.md](docs/wb-jam-api.md).
+**143 инструмента только для чтения данных Seller API.** Полный актуальный перечень: [docs/tools.md](docs/tools.md). Отдельно описано полное покрытие публичного read-only API WB Джем: [docs/wb-jam-api.md](docs/wb-jam-api.md).
 
 Поддерживаются карточки и каталог, цены и история загрузок, календарь акций, рекламные кампании и статистика, заказы FBS/DBS/click & collect, поставки и остатки, финансовые отчёты, тарифы, отзывы и вопросы, возвраты, чаты (чтение), документы, продажи и поисковая аналитика.
 
@@ -181,7 +181,7 @@ claude mcp list      # ожидается: wildberries ... ✔ Connected
 ## Мульти-магазин и безопасность
 
 **Несколько кабинетов.** Магазины добавляются на `/shops`, каждый получает свой `shop_id`.
-Инструмент `wb_list_shops` возвращает список; 138 из 139 инструментов принимают `shop_id`
+Инструмент `wb_list_shops` возвращает список; 142 из 143 инструментов принимают `shop_id`
 первым параметром (исключения — `wb_list_shops` и `wb_degradations`).
 Если магазин один, параметр можно опустить: сервер подставит единственный доступный.
 
