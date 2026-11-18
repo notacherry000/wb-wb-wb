@@ -17,6 +17,8 @@
 
 import asyncio
 import httpx
+import io
+import zipfile
 from typing import Any
 from datetime import datetime, timedelta
 
@@ -774,48 +776,81 @@ class WBClient:
         return await self._post(self._analytics, "/api/analytics/v1/item/rating", {"nmIds": nm_ids})
 
     async def analytics_sales_funnel_grouped_history(
-        self, nm_ids: list[int], date_from: str, date_to: str,
+        self, date_from: str, date_to: str,
+        brand_names: list[str] | None = None,
+        subject_ids: list[int] | None = None,
+        tag_ids: list[int] | None = None,
+        skip_deleted_nm: bool = False,
         aggregation_level: str = "day",
     ) -> dict:
-        """POST /api/analytics/v3/sales-funnel/grouped/history — воронка продаж по группам/дням."""
-        return await self._post(self._analytics, "/api/analytics/v3/sales-funnel/grouped/history", {
+        """POST /api/analytics/v3/sales-funnel/grouped/history — grouped funnel by subject/brand/tag."""
+        body: dict[str, Any] = {
             "selectedPeriod": {"start": date_from, "end": date_to},
-            "nmIds": nm_ids,
+            "skipDeletedNm": skip_deleted_nm,
             "aggregationLevel": aggregation_level,
-        })
+        }
+        if brand_names is not None: body["brandNames"] = brand_names
+        if subject_ids is not None: body["subjectIds"] = subject_ids
+        if tag_ids is not None: body["tagIds"] = tag_ids
+        return await self._post(self._analytics, "/api/analytics/v3/sales-funnel/grouped/history", body)
 
-    async def nm_report(self, nm_ids: list[int] | None = None,
-                        date_from: str | None = None, date_to: str | None = None) -> Any:
-        """POST /api/v2/nm-report/downloads — создать и скачать отчёт по номенклатуре (task-based).
-        Содержит: выручка, заказы, возвраты, среднее в корзине, конверсии по каждому nmID.
-        Ждёт готовности (до 3 минут). Отчёт хранится 3 дня.
-        """
-        body: dict[str, Any] = {}
-        if nm_ids:
-            body["nmIds"] = nm_ids
-        if date_from and date_to:
-            body["period"] = {"start": date_from, "end": date_to}
-        # Создаём задание
-        created = await self._post(self._analytics, "/api/v2/nm-report/downloads", body)
-        report_id = (created.get("data") or {}).get("id") or created.get("id")
-        if not report_id:
-            return created
-        # Ждём готовности
-        import asyncio as _aio
-        for _ in range(36):  # до 3 минут
-            await _aio.sleep(5)
-            reports = await self._get(self._analytics, "/api/v2/nm-report/downloads")
-            items = (reports.get("data") or {}).get("reports") or reports.get("reports") or []
-            found = next((r for r in items if r.get("id") == report_id), None)
-            if found:
-                status = found.get("status")
-                if status == "done":
-                    dl = await self._get(self._analytics, f"/api/v2/nm-report/downloads/file/{report_id}")
-                    return dl
-                if status in ("error", "canceled"):
-                    return {"report_id": report_id, "status": status}
-        return {"report_id": report_id, "status": "timeout",
-                "hint": "Отчёт ещё готовится. Вызови позже."}
+    async def analytics_csv_report_create(self, report_id: str, report_type: str,
+                                          params: dict[str, Any],
+                                          user_report_name: str | None = None) -> Any:
+        """Create a Seller Analytics CSV export job. This creates only a report task, never seller data."""
+        allowed = {
+            "DETAIL_HISTORY_REPORT", "GROUPED_HISTORY_REPORT",
+            "SEARCH_QUERIES_PREMIUM_REPORT_GROUP",
+            "SEARCH_QUERIES_PREMIUM_REPORT_PRODUCT",
+            "SEARCH_QUERIES_PREMIUM_REPORT_TEXT",
+            "STOCK_HISTORY_REPORT_CSV", "STOCK_HISTORY_DAILY_CSV",
+        }
+        if report_type not in allowed:
+            raise ValueError(f"Unsupported reportType: {report_type}")
+        body: dict[str, Any] = {"id": report_id, "reportType": report_type, "params": params}
+        if user_report_name:
+            body["userReportName"] = user_report_name
+        return await self._post(self._analytics, "/api/v2/nm-report/downloads", body)
+
+    async def analytics_csv_reports_list(self, download_ids: list[str] | None = None) -> Any:
+        """GET /api/v2/nm-report/downloads — list Seller Analytics CSV report jobs and statuses."""
+        params = {"filter[downloadIds]": download_ids} if download_ids else None
+        return await self._get(self._analytics, "/api/v2/nm-report/downloads", params)
+
+    async def analytics_csv_report_retry(self, download_id: str) -> Any:
+        """Retry a failed CSV report generation task; does not alter seller catalogue or settings."""
+        return await self._post(self._analytics, "/api/v2/nm-report/downloads/retry",
+                                {"downloadId": download_id})
+
+    async def analytics_csv_report_download(self, download_id: str) -> Any:
+        """GET CSV report ZIP and return decoded CSV files; report task is read-only."""
+        path = f"/api/v2/nm-report/downloads/file/{download_id}"
+        delay = 1.0
+        for attempt in range(5):
+            response = await self._analytics.get(path)
+            if response.status_code in self._RETRY_STATUSES and attempt < 4:
+                retry_after = response.headers.get("Retry-After", "")
+                try: wait = float(retry_after) if retry_after else delay
+                except ValueError: wait = delay
+                await asyncio.sleep(min(wait, 15.0))
+                delay = min(delay * 2, 15.0)
+                continue
+            disabled = self._temporarily_disabled(response)
+            if disabled is not None: return disabled
+            response.raise_for_status()
+            try:
+                with zipfile.ZipFile(io.BytesIO(response.content)) as archive:
+                    files = {}
+                    for name in archive.namelist():
+                        if name.endswith("/"): continue
+                        raw = archive.read(name)
+                        files[name] = raw.decode("utf-8-sig", errors="replace")
+                    return {"download_id": download_id, "files": files}
+            except zipfile.BadZipFile:
+                return {"download_id": download_id, "content_type": response.headers.get("Content-Type"),
+                        "error": "WB response is not a valid ZIP archive",
+                        "body_preview": response.text[:2000]}
+        raise RuntimeError("WB CSV report download failed after retries")
 
     async def stocks_report_sizes(self, nm_ids: list[int] | None = None,
                                    date_from: str | None = None, date_to: str | None = None,
