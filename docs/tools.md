@@ -1,6 +1,6 @@
 # Справочник read-only инструментов
 
-Каталог содержит **139 инструментов**. Список формируется из `wb_mcp/server.py` и соответствует MCP-ответу `tools/list`.
+Каталог содержит **142 инструментов**. Полный перечень методов WB Джем: [docs/wb-jam-api.md](wb-jam-api.md). Список формируется из `wb_mcp/server.py` и соответствует MCP-ответу `tools/list`.
 
 Сервер предоставляет только чтение данных Seller API. Инструменты создания, изменения, удаления, публикации, отправки сообщений, управления ценами/ставками/остатками и изменения заказов удалены из каталога, диспетчеризации и HTTP-клиента. HTTP POST используется только там, где сам Wildberries реализовал чтение через POST (например, воронка, поиск и выборки карточек).
 
@@ -107,7 +107,7 @@
 - `wb_fbw_warehouses`
 - `wb_acceptance_coefficients`
 
-## Продажи и аналитика (23)
+## Продажи и аналитика (26)
 
 - `wb_analytics_brand_share`
 - `wb_analytics_brand_share_brands`
@@ -116,12 +116,15 @@
 - `wb_analytics_excise`
 - `wb_analytics_item_rating`
 - `wb_analytics_grouped_history`
-- `wb_nm_report`
 - `wb_analytics_stocks_sizes`
 - `wb_search_table_details`
 - `wb_search_table_groups`
 - `wb_search_product_orders`
 - `wb_jam_subscription`
+- `wb_analytics_csv_report_create`
+- `wb_analytics_csv_reports_list`
+- `wb_analytics_csv_report_retry`
+- `wb_analytics_csv_report_download`
 - `wb_paid_storage`
 - `wb_analytics_detail`
 - `wb_analytics_history`
