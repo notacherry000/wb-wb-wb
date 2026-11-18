@@ -1,32 +1,12 @@
-"""Wildberries MCP Server — инструменты для управления бизнесом на WB.
+"""Read-only Wildberries Seller API MCP server.
 
-Разделы: Магазины, Товары, Цены, Заказы, Финансы, Реклама, Аналитика,
-         Отзывы, Вопросы, Возвраты, Тарифы, Обращения.
-Поддержка нескольких магазинов через параметр shop_id: он передаётся явно,
-а при единственном магазине подставляется сервером и в схемы не попадает.
+The upstream architecture is retained: multi-store client pool, MCP stdio/SSE
+transports, diagnostics, request throttling/retries, response shaping, tool
+profiles, dashboard integration and encrypted shop settings.
 
-В описаниях помечены только инструменты P0 — те, где ошибка означает прямые
-финансовые потери (блокировки, убыточные цены и реклама). Остальные градации
-(P1-P3) убраны из описаний: они стоили токенов контекста, не влияя на выбор.
-
-v2.2.0 — диспетчеризация инструментов через словари NO_CLIENT_DISPATCH /
-         CLIENT_DISPATCH вместо if/elif цепочки + 39 новых инструментов.
-
-v2.3.0 — оптимизация контекста: компактный JSON в ответах, сжатые описания
-         инструментов, shop_id скрывается при единственном магазине
-         (определения: 27 460 → 17 709 токенов).
-
-v2.3.1 — default в JSON-схемах limit приведён к фактическому дефолту
-         handler'ов, добавлена сверка тестом.
-
-v2.4.0 — формирование ответа (wb_mcp/shaping.py): пресеты view=compact|full,
-         сигнал усечения, предохранитель размера, фильтр справочника комиссий.
-         Корпус живых ответов: 770 506 → 74 947 токенов.
-
-v2.5.0 — профили инструментов (wb_mcp/toolsets.py): WB_TOOLSETS оставляет
-         нужные разделы каталога; core (магазины, диагностика, деградации,
-         токен) включён всегда. 202 инструмента = 18 011 токенов, pricing+ads
-         = 4 925.
+Only retrieval operations are exposed. Mutation tools, their dispatch handlers,
+and corresponding WBClient methods are removed. POST is still used for WB
+endpoints whose semantics are read-only (search, reports, lists and analytics).
 """
 
 import json
