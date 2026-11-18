@@ -600,6 +600,10 @@ class WBClient:
     # nm-report detail/grouped УДАЛЕНЫ из WB API (миграция завершена 12.2025).
     # Замена — воронка продаж v3 (sales-funnel). Лимит: 3 запроса/мин.
 
+    async def analytics_order_feed(self, body: dict[str, Any]) -> dict:
+        """POST /api/analytics/v1/order-feed — read-only order/sales feed with filters and snapshot pagination."""
+        return await self._post(self._analytics, "/api/analytics/v1/order-feed", body)
+
     async def analytics_sales_funnel(
         self, date_from: str, date_to: str,
         nm_ids: list[int] | None = None,
