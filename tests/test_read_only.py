@@ -82,3 +82,70 @@ def test_minus_phrase_tool_is_read_only():
     source = inspect.getsource(server._h_advert_minus_phrases)
     assert "advert_minus_phrases_get" in source
     assert "advert_minus_phrases_set" not in source
+
+
+def test_wb_jam_public_read_api_is_fully_registered():
+    expected = {
+        "wb_jam_subscription",
+        "wb_search_report",
+        "wb_search_table_groups",
+        "wb_search_table_details",
+        "wb_search_texts",
+        "wb_search_product_orders",
+        "wb_analytics_detail",
+        "wb_analytics_history",
+        "wb_analytics_grouped_history",
+        "wb_analytics_csv_report_create",
+        "wb_analytics_csv_reports_list",
+        "wb_analytics_csv_report_retry",
+        "wb_analytics_csv_report_download",
+    }
+    registered = {tool.name for tool in server.TOOLS}
+    assert expected <= registered
+    assert expected <= set(server.CLIENT_DISPATCH)
+    assert "wb_nm_report" not in registered
+
+
+def test_jam_csv_report_types_cover_documented_export_families():
+    tool = next(t for t in server.TOOLS if t.name == "wb_analytics_csv_report_create")
+    allowed = set(tool.inputSchema["properties"]["report_type"]["enum"])
+    assert allowed == {
+        "DETAIL_HISTORY_REPORT",
+        "GROUPED_HISTORY_REPORT",
+        "SEARCH_QUERIES_PREMIUM_REPORT_GROUP",
+        "SEARCH_QUERIES_PREMIUM_REPORT_PRODUCT",
+        "SEARCH_QUERIES_PREMIUM_REPORT_TEXT",
+        "STOCK_HISTORY_REPORT_CSV",
+        "STOCK_HISTORY_DAILY_CSV",
+    }
+
+
+def test_jam_csv_report_tools_are_read_workflows_not_seller_mutations():
+    client = client_module.WBClient
+    for name in (
+        "analytics_csv_report_create",
+        "analytics_csv_reports_list",
+        "analytics_csv_report_retry",
+        "analytics_csv_report_download",
+        "search_report",
+        "search_table_groups",
+        "search_table_details",
+        "search_texts_by_product",
+        "search_product_orders",
+        "analytics_sales_funnel",
+        "analytics_sales_funnel_history",
+        "analytics_sales_funnel_grouped_history",
+    ):
+        assert hasattr(client, name), name
+    assert not hasattr(client, "nm_report")
+
+
+def test_jam_tools_accept_complete_wb_request_bodies():
+    search = next(t for t in server.TOOLS if t.name == "wb_search_report")
+    assert "body" in search.inputSchema["properties"]
+    texts = next(t for t in server.TOOLS if t.name == "wb_search_texts")
+    assert "body" in texts.inputSchema["properties"]
+    details = next(t for t in server.TOOLS if t.name == "wb_search_table_details")
+    groups = next(t for t in server.TOOLS if t.name == "wb_search_table_groups")
+    assert "body" in details.inputSchema["properties"]
+    assert "body" in groups.inputSchema["properties"]
