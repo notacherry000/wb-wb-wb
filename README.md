@@ -551,7 +551,7 @@ wb-mcp-server/
 ├── DEPLOY.md                   # deploying to a dedicated machine, moving the data
 ├── docs/                       # client setup guides + tool reference
 └── wb_mcp/
-    ├── server.py       # MCP server: 142 read-only tools, dispatch tables, stdio mode
+    ├── server.py       # MCP server: 143 read-only tools, dispatch tables, stdio mode
     ├── client.py       # HTTP clients for the 14 Wildberries APIs
     ├── app.py          # FastAPI: SSE + web UI + auth + health loop
     ├── diagnostics.py  # pings, JWT decoder, probes, API news
