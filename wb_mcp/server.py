@@ -530,8 +530,10 @@ TOOLS = [
           ["date_from", "date_to"]),
     _tool("wb_analytics_history",
           "Sales funnel BY DAY, last week at most, for conversion trends (воронка по дням).",
-          {"nm_ids": {"type": "array", "items": {"type": "integer"}},
-           "date_from": {"type": "string"}, "date_to": {"type": "string"}},
+          {"nm_ids": {"type": "array", "items": {"type": "integer"}, "minItems": 1, "maxItems": 20},
+           "date_from": {"type": "string"}, "date_to": {"type": "string"},
+           "aggregation_level": {"type": "string", "enum": ["day", "week"], "default": "day"},
+           "skip_deleted_nm": {"type": "boolean", "default": false}},
           ["nm_ids", "date_from", "date_to"]),
     _tool("wb_analytics_stocks",
           "Interactive stock and turnover report: healthy, scarce and dead goods (остатки, оборачиваемость).",
@@ -913,7 +915,10 @@ async def _h_analytics_detail(c, a): return await c.analytics_sales_funnel(
     subject_ids=a.get("subject_ids"), tag_ids=a.get("tag_ids"), past_period=a.get("past_period"),
     skip_deleted_nm=a.get("skip_deleted_nm", False), order_by=a.get("order_by"),
     limit=a.get("limit", 100), offset=a.get("offset", 0))
-async def _h_analytics_history(c, a): return await c.analytics_sales_funnel_history(a["nm_ids"], a["date_from"], a["date_to"])
+async def _h_analytics_history(c, a): return await c.analytics_sales_funnel_history(
+    a["nm_ids"], a["date_from"], a["date_to"],
+    aggregation_level=a.get("aggregation_level", "day"),
+    skip_deleted_nm=a.get("skip_deleted_nm", False))
 async def _h_analytics_stocks(c, a): return await c.analytics_stocks_report(
     a["date_from"], a["date_to"], nm_ids=a.get("nm_ids"), limit=a.get("limit", 100))
 async def _h_warehouse_remains(c, a): return await c.analytics_warehouse_remains()
