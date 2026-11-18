@@ -64,7 +64,7 @@
 - `wb_search_report`
 - `wb_search_texts`
 
-## Заказы, поставки, склады и остатки (41)
+## Заказы, поставки, склады и остатки (40)
 
 - `wb_order_meta_get`
 - `wb_orders_status_history`
@@ -91,7 +91,6 @@
 - `wb_cc_order_identity`
 - `wb_cc_order_meta_get`
 - `wb_fbw_transit_tariffs`
-- `wb_warehouse_remains`
 - `wb_orders_new`
 - `wb_orders_list`
 - `wb_orders_status`
