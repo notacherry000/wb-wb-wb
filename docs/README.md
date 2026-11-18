@@ -1,6 +1,6 @@
 # Подключение MCP-клиентов
 
-WB MCP Server отдаёт MCP по транспорту **SSE**:
+WB MCP Server публикует только read-only инструменты Seller API и отдаёт MCP по транспорту **SSE**:
 
 | | |
 |---|---|
@@ -36,6 +36,7 @@ curl -sN --max-time 3 http://localhost:8001/sse | head -2
 |---|---|
 | Claude Code | `claude mcp add --transport sse wildberries http://localhost:8001/sse` |
 | Gemini CLI | `gemini mcp add --transport sse wildberries http://localhost:8001/sse` |
+| ChatGPT | удалённый HTTPS MCP / Secure MCP Tunnel | [install-chatgpt.md](install-chatgpt.md) |
 | Codex CLI | `codex mcp add wildberries -- npx -y mcp-remote http://localhost:8001/sse --transport sse-only --allow-http` |
 | VS Code | палитра команд → `MCP: Add Server` |
 | Cursor, Cline, Windsurf, Zed, JetBrains | форма добавления сервера в интерфейсе |
