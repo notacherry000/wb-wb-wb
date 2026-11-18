@@ -92,6 +92,7 @@ def test_wb_jam_public_read_api_is_fully_registered():
         "wb_search_table_details",
         "wb_search_texts",
         "wb_search_product_orders",
+        "wb_analytics_order_feed",
         "wb_analytics_detail",
         "wb_analytics_history",
         "wb_analytics_grouped_history",
