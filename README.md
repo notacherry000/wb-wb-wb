@@ -339,7 +339,7 @@ than estimated — `scripts/collect_corpus.py` takes a snapshot of read-only too
 (PII masked before anything is written to disk, the corpus stays out of the repo),
 `scripts/measure_corpus.py` reports what it costs.
 
-**Definitions.** The read-only catalogue now contains 139 tools; context usage depends on the active profile and client,
+**Definitions.** The read-only catalogue now contains 143 tools; context usage depends on the active profile and client,
 down from 27 460. Descriptions are one sentence each, `shop_id` is dropped from the
 schemas when only one store exists (the server fills it in), and empty schema fields
 are not serialised.
