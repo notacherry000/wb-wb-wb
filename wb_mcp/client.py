@@ -227,13 +227,6 @@ class WBClient:
             params["filterNmID"] = filter_nm_id
         return await self._get(self._prices, "/api/v2/list/goods/filter", params)
 
-    async def prices_sizes_set(self, data: list[dict]) -> dict:
-        """POST /api/v2/upload/task/size — установить цены по размерам.
-
-        Каждый элемент: {"nmID": 123, "sizeID": 456, "price": 1000}
-        """
-        return await self._post(self._prices, "/api/v2/upload/task/size", {"data": data})
-
     async def prices_quarantine_list(self, limit: int = 1000, offset: int = 0) -> dict:
         """GET /api/v2/quarantine/goods — товары в карантине цен (цена упала ≥3x).
         КРИТИЧНО: карантин = цена была снижена слишком сильно, новая цена не применяется.
@@ -920,13 +913,6 @@ class WBClient:
         if nm_id:
             body["nm_id"] = nm_id
         return await self._post(self._advert, "/adv/v0/normquery/get-minus", body)
-
-    async def advert_minus_phrases_set(self, advert_id: int, nm_id: int, norm_queries: list[str]) -> Any:
-        """POST /adv/v0/normquery/set-minus — установить минус-фразы (плюс-фраз с 2026 нет)."""
-        return await self._post(self._advert, "/adv/v0/normquery/set-minus",
-                                {"advert_id": advert_id, "nm_id": nm_id, "norm_queries": norm_queries})
-
-    # ── Доп. инструменты рекламы ─────────────────────────────
 
     async def advert_payments(self, date_from: str, date_to: str) -> Any:
         """GET /adv/v1/payments — история пополнений рекламного счёта за период (даты YYYY-MM-DD)."""
