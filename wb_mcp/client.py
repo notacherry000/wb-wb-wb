@@ -605,24 +605,26 @@ class WBClient:
         nm_ids: list[int] | None = None,
         brand_names: list[str] | None = None,
         subject_ids: list[int] | None = None,
+        tag_ids: list[int] | None = None,
+        past_period: dict[str, str] | None = None,
+        skip_deleted_nm: bool = False,
+        order_by: dict[str, str] | None = None,
         limit: int = 100, offset: int = 0,
     ) -> dict:
-        """POST /api/analytics/v3/sales-funnel/products — воронка продаж по карточкам.
-
-        Метрики: просмотры, клики, корзина, заказы, выручка, конверсии (+ сравнение периодов).
-        КРИТИЧНО: падение конверсий = проблема SEO или конкурент обошёл. Лимит 3/мин.
-        """
+        """POST /api/analytics/v3/sales-funnel/products — full sales funnel by product."""
+        if not 1 <= limit <= 1000:
+            raise ValueError("limit must be between 1 and 1000")
         body: dict[str, Any] = {
             "selectedPeriod": {"start": date_from, "end": date_to},
-            "orderBy": {"field": "openCard", "mode": "desc"},
+            "orderBy": order_by or {"field": "openCard", "mode": "desc"},
+            "skipDeletedNm": skip_deleted_nm,
             "limit": limit, "offset": offset,
         }
-        if nm_ids:
-            body["nmIds"] = nm_ids
-        if brand_names:
-            body["brandNames"] = brand_names
-        if subject_ids:
-            body["subjectIds"] = subject_ids
+        if nm_ids is not None: body["nmIds"] = nm_ids
+        if brand_names is not None: body["brandNames"] = brand_names
+        if subject_ids is not None: body["subjectIds"] = subject_ids
+        if tag_ids is not None: body["tagIds"] = tag_ids
+        if past_period is not None: body["pastPeriod"] = past_period
         return await self._post(self._analytics, "/api/analytics/v3/sales-funnel/products", body)
 
     async def analytics_sales_funnel_history(
