@@ -17,6 +17,8 @@
 
 import asyncio
 import httpx
+import io
+import zipfile
 from typing import Any
 from datetime import datetime, timedelta
 
@@ -131,19 +133,6 @@ class WBClient:
     async def _get(self, client: httpx.AsyncClient, path: str, params: dict | None = None) -> Any:
         return await self._send("GET", client, path, params=params)
 
-    async def _put(self, client: httpx.AsyncClient, path: str, body: dict | list | None = None) -> Any:
-        return await self._send("PUT", client, path, json_body=body if body is not None else {})
-
-    async def _patch(self, client: httpx.AsyncClient, path: str, body: dict | list | None = None) -> Any:
-        return await self._send("PATCH", client, path, json_body=body if body is not None else {})
-
-    async def _delete(self, client: httpx.AsyncClient, path: str, params: dict | None = None) -> Any:
-        return await self._send("DELETE", client, path, params=params)
-
-    # ═══════════════════════════════════════════════════════════
-    # CONTENT API — Карточки товаров
-    # ═══════════════════════════════════════════════════════════
-
     async def cards_cursor_list(
         self, limit: int = 100, cursor: dict | None = None,
         filter_params: dict | None = None,
@@ -168,35 +157,17 @@ class WBClient:
             "nmIDs": nm_ids,
         })
 
-    async def cards_update(self, cards: list[dict]) -> dict:
-        """POST /content/v2/cards/update — обновить карточки (описание, SEO, характеристики)."""
-        return await self._post(self._content, "/content/v2/cards/update", cards)
-
     async def card_errors_list(self, limit: int = 100) -> dict:
         """POST /content/v2/cards/error/list — карточки с ошибками (несозданные/отклонённые).
         КРИТИЧНО: показывает заблокированные карточки в т.ч. по обращениям правообладателей!
         """
         return await self._post(self._content, "/content/v2/cards/error/list", {})
 
-    async def cards_create(self, cards: list[dict]) -> dict:
-        """POST /content/v2/cards/upload — создание карточек (асинхронно, синхронизация до 30 мин)."""
-        return await self._post(self._content, "/content/v2/cards/upload", cards)
-
-    async def barcodes_generate(self, count: int = 1) -> dict:
-        """POST /content/v2/barcodes — генерация баркодов."""
-        return await self._post(self._content, "/content/v2/barcodes", {"count": count})
-
     async def cards_trash_list(self, limit: int = 100, cursor: dict | None = None) -> dict:
         """POST /content/v2/get/cards/trash — карточки в корзине."""
         return await self._post(self._content, "/content/v2/get/cards/trash", {
             "settings": {"cursor": cursor or {"limit": limit}}
         })
-
-    async def media_save_by_links(self, nm_id: int, links: list[str]) -> dict:
-        """POST /content/v3/media/save — загрузить медиа по ссылкам.
-        ВНИМАНИЕ: полностью ЗАМЕНЯЕТ существующие фото/видео карточки!
-        """
-        return await self._post(self._content, "/content/v3/media/save", {"nmId": nm_id, "data": links})
 
     async def subjects_list(self, name: str | None = None, parent_id: int | None = None,
                             limit: int = 100, offset: int = 0) -> dict:
@@ -226,19 +197,6 @@ class WBClient:
         """GET /content/v2/tags — список ярлыков продавца."""
         return await self._get(self._content, "/content/v2/tags")
 
-    async def tag_nomenclature_link(self, nm_id: int, tag_ids: list[int]) -> dict:
-        """POST /content/v2/tag/nomenclature/link — привязать/снять ярлыки с карточки."""
-        return await self._post(self._content, "/content/v2/tag/nomenclature/link", {"nmID": nm_id, "tagsIDs": tag_ids})
-
-    async def cards_move_to_trash(self, nm_ids: list[int]) -> dict:
-        """POST /content/v2/cards/delete/trash — переместить карточки в корзину."""
-        return await self._post(self._content, "/content/v2/cards/delete/trash", {"nmIDs": nm_ids})
-
-    async def cards_recover_from_trash(self, nm_ids: list[int]) -> dict:
-        """POST /content/v2/cards/recover — восстановить карточки из корзины."""
-        r = await self._content.post("/content/v2/cards/recover", json={"nmIDs": nm_ids})
-        return {"status": r.status_code, "body": r.text}
-
     async def cards_limits(self) -> dict:
         """GET /content/v2/cards/limits — лимиты на создание карточек."""
         return await self._get(self._content, "/content/v2/cards/limits")
@@ -247,26 +205,9 @@ class WBClient:
         """GET /content/v2/object/charcs/{objectName} — характеристики для категории (для SEO)."""
         return await self._get(self._content, f"/content/v2/object/charcs/{object_name}")
 
-    async def tag_create(self, name: str, color: str = "#FF0000") -> dict:
-        """POST /content/v2/tag — создать ярлык (тег). color: HEX-цвет."""
-        return await self._post(self._content, "/content/v2/tag", {"name": name, "color": color})
-
-    async def tag_update(self, tag_id: int, name: str, color: str) -> dict:
-        """PATCH /content/v2/tag/{id} — обновить ярлык (название, цвет)."""
-        return await self._patch(self._content, f"/content/v2/tag/{tag_id}", {"name": name, "color": color})
-
-    async def tag_delete(self, tag_id: int) -> dict:
-        """DELETE /content/v2/tag/{id} — удалить ярлык. ВНИМАНИЕ: ошибка если тег привязан к товарам."""
-        return await self._delete(self._content, f"/content/v2/tag/{tag_id}")
-
     async def card_recommendations_get(self, nm_id: int) -> dict:
         """POST /api/content/v1/recommendations/list — рекомендованные товары к карточке."""
         return await self._post(self._content, "/api/content/v1/recommendations/list", {"nmId": nm_id})
-
-    async def card_recommendations_set(self, nm_id: int, recommended_nm_ids: list[int]) -> dict:
-        """POST /api/content/v1/recommendations/set — установить рекомендованные товары к карточке (≤10 nmID)."""
-        return await self._post(self._content, "/api/content/v1/recommendations/set",
-                                {"nmId": nm_id, "recommendedNmIds": recommended_nm_ids})
 
     async def brands_list(self, subject_id: int | None = None) -> dict:
         """GET /api/content/v1/brands — список брендов продавца по ID предмета."""
@@ -288,32 +229,11 @@ class WBClient:
             params["filterNmID"] = filter_nm_id
         return await self._get(self._prices, "/api/v2/list/goods/filter", params)
 
-    async def prices_set(self, data: list[dict]) -> dict:
-        """POST /api/v2/upload/task — установить цены и скидки.
-
-        Каждый элемент: {"nmID": 123, "price": 1000, "discount": 15}
-        """
-        return await self._post(self._prices, "/api/v2/upload/task", {"data": data})
-
-    async def prices_sizes_set(self, data: list[dict]) -> dict:
-        """POST /api/v2/upload/task/size — установить цены по размерам.
-
-        Каждый элемент: {"nmID": 123, "sizeID": 456, "price": 1000}
-        """
-        return await self._post(self._prices, "/api/v2/upload/task/size", {"data": data})
-
     async def prices_quarantine_list(self, limit: int = 1000, offset: int = 0) -> dict:
         """GET /api/v2/quarantine/goods — товары в карантине цен (цена упала ≥3x).
         КРИТИЧНО: карантин = цена была снижена слишком сильно, новая цена не применяется.
         """
         return await self._get(self._prices, "/api/v2/quarantine/goods", {"limit": limit, "offset": offset})
-
-    async def prices_club_discount_set(self, data: list[dict]) -> dict:
-        """POST /api/v2/upload/task/club-discount — установить скидки WB Клуба (≤1000).
-
-        Каждый элемент: {"nmID": 123, "clubDiscount": 5}
-        """
-        return await self._post(self._prices, "/api/v2/upload/task/club-discount", {"data": data})
 
     async def prices_upload_status(self, upload_id: int, buffer: bool = False) -> dict:
         """GET /api/v2/history/tasks | /api/v2/buffer/tasks — состояние загрузки цен.
@@ -332,17 +252,6 @@ class WBClient:
     async def prices_size_list(self, nm_id: int, limit: int = 100, offset: int = 0) -> dict:
         """GET /api/v2/list/goods/size/nm — размеры товара с ценами."""
         return await self._get(self._prices, "/api/v2/list/goods/size/nm", {"nmID": nm_id, "limit": limit, "offset": offset})
-
-    async def prices_b2b_set(self, data: list[dict]) -> dict:
-        """POST /api/discounts-prices/v1/upload/task/b2b/wholesale — оптовые B2B скидки.
-        Каждый элемент: {"nmID": 123, "wholesaleDiscount": 10}
-        """
-        return await self._post(self._prices, "/api/discounts-prices/v1/upload/task/b2b/wholesale",
-                                {"data": data})
-
-    # ═══════════════════════════════════════════════════════════
-    # PROMOTIONS — Календарь акций (dp-calendar-api)
-    # ═══════════════════════════════════════════════════════════
 
     async def promotions_list(self, start: str, end: str, all_promo: bool = False,
                               limit: int = 1000, offset: int = 0,
@@ -403,18 +312,6 @@ class WBClient:
         if in_action is not None:
             params["inAction"] = str(in_action).lower()
         return await self._get(self._calendar, "/api/v1/calendar/promotions/nomenclatures", params)
-
-    async def promotions_upload(self, promotion_id: int, nm_ids: list[int], upload_now: bool = True) -> dict:
-        """POST /api/v1/calendar/promotions/upload — добавить товары в акцию.
-
-        upload_now=True — сразу; False — в буфер, скидки применятся при старте акции.
-        ВЫХОД из акции — через установку цены/скидки (prices_set), отдельного эндпоинта нет.
-        """
-        return await self._post(self._calendar, "/api/v1/calendar/promotions/upload", {
-            "data": {"promotionID": promotion_id, "uploadNow": upload_now, "nomenclatures": nm_ids},
-        })
-
-    # ── Композитные инструменты по акциям/автоакциям ──────────
 
     async def promotions_auto(self, start: str, end: str, limit: int = 1000, offset: int = 0) -> dict:
         """Только АВТОАКЦИИ (type=auto) за период — WB добавляет товары сам.
@@ -489,20 +386,6 @@ class WBClient:
             "promotions": result,
         }
 
-    async def promotions_exit(self, data: list[dict]) -> dict:
-        """Выйти из акции = восстановить цену/скидку (отдельного эндпоинта у WB нет).
-
-        data: [{nmID, price, discount}, ...] — целевые (доакционные) значения.
-        Под капотом POST /api/v2/upload/task (как prices_set).
-        """
-        res = await self.prices_upload(data)
-        return {"note": "Выход из акции выполняется восстановлением цены/скидки через Prices API.",
-                "uploadResult": res}
-
-    # ═══════════════════════════════════════════════════════════
-    # MARKETPLACE API — Заказы, поставки, склады
-    # ═══════════════════════════════════════════════════════════
-
     async def orders_new(self) -> list:
         """GET /api/v3/orders/new — новые заказы FBS (ожидают сборки)."""
         return await self._get(self._marketplace, "/api/v3/orders/new")
@@ -524,10 +407,6 @@ class WBClient:
         """POST /api/v3/orders/status — статусы заказов."""
         return await self._post(self._marketplace, "/api/v3/orders/status", {"orders": order_ids})
 
-    async def order_cancel(self, order_id: int) -> dict:
-        """PATCH /api/v3/orders/{orderId}/cancel — отменить сборочное задание FBS."""
-        return await self._patch(self._marketplace, f"/api/v3/orders/{order_id}/cancel")
-
     async def orders_stickers(self, order_ids: list[int], sticker_type: str = "png",
                               width: int = 58, height: int = 40) -> dict:
         """POST /api/v3/orders/stickers — стикеры для сборочных заданий (≤100).
@@ -548,26 +427,9 @@ class WBClient:
         """GET /api/v3/supplies — список поставок FBS."""
         return await self._get(self._marketplace, "/api/v3/supplies", {"limit": limit, "next": next_param})
 
-    async def supply_create(self, name: str) -> dict:
-        """POST /api/v3/supplies — создать поставку FBS."""
-        return await self._post(self._marketplace, "/api/v3/supplies", {"name": name})
-
     async def supply_detail(self, supply_id: str) -> dict:
         """GET /api/v3/supplies/{supplyId} — информация о поставке FBS."""
         return await self._get(self._marketplace, f"/api/v3/supplies/{supply_id}")
-
-    async def supply_delete(self, supply_id: str) -> dict:
-        """DELETE /api/v3/supplies/{supplyId} — удалить пустую активную поставку."""
-        return await self._delete(self._marketplace, f"/api/v3/supplies/{supply_id}")
-
-    async def supply_add_orders(self, supply_id: str, order_ids: list[int]) -> dict:
-        """PATCH /api/marketplace/v3/supplies/{supplyId}/orders — добавить задания в поставку (≤100)."""
-        return await self._patch(self._marketplace, f"/api/marketplace/v3/supplies/{supply_id}/orders",
-                                 {"orders": order_ids})
-
-    async def supply_deliver(self, supply_id: str) -> dict:
-        """PATCH /api/v3/supplies/{supplyId}/deliver — закрыть поставку и передать в доставку."""
-        return await self._patch(self._marketplace, f"/api/v3/supplies/{supply_id}/deliver")
 
     async def supply_barcode(self, supply_id: str, barcode_type: str = "png") -> dict:
         """GET /api/v3/supplies/{supplyId}/barcode — QR-код поставки (svg/zplv/zplh/png)."""
@@ -624,45 +486,9 @@ class WBClient:
         """GET /api/v3/warehouses — список складов продавца."""
         return await self._get(self._marketplace, "/api/v3/warehouses")
 
-    async def stocks_update(self, warehouse_id: int, stocks: list[dict]) -> dict:
-        """PUT /api/v3/stocks/{warehouseId} — обновить остатки на складе FBS.
-
-        Каждый элемент stocks: {"sku": "123456", "amount": 10}
-        """
-        return await self._put(self._marketplace, f"/api/v3/stocks/{warehouse_id}", {"stocks": stocks})
-
     async def stocks_get(self, warehouse_id: int, skus: list[str]) -> dict:
         """POST /api/v3/stocks/{warehouseId} — получить остатки на складе FBS."""
         return await self._post(self._marketplace, f"/api/v3/stocks/{warehouse_id}", {"skus": skus})
-
-    async def warehouse_create(self, name: str, address: str | None = None,
-                                work_time: str | None = None) -> dict:
-        """POST /api/v3/warehouses — создать склад продавца."""
-        body: dict[str, Any] = {"name": name}
-        if address:
-            body["address"] = address
-        if work_time:
-            body["workTime"] = work_time
-        return await self._post(self._marketplace, "/api/v3/warehouses", body)
-
-    async def warehouse_update(self, warehouse_id: int, name: str | None = None,
-                                address: str | None = None) -> dict:
-        """PUT /api/v3/warehouses/{warehouseId} — обновить склад продавца."""
-        body: dict[str, Any] = {}
-        if name:
-            body["name"] = name
-        if address:
-            body["address"] = address
-        return await self._put(self._marketplace, f"/api/v3/warehouses/{warehouse_id}", body)
-
-    async def warehouse_delete(self, warehouse_id: int) -> Any:
-        """DELETE /api/v3/warehouses/{warehouseId} — удалить склад продавца."""
-        return await self._delete(self._marketplace, f"/api/v3/warehouses/{warehouse_id}")
-
-    async def stocks_delete(self, warehouse_id: int, skus: list[str]) -> dict:
-        """DELETE /api/v3/stocks/{warehouseId} — удалить записи об остатках по SKU."""
-        return await self._send("DELETE", self._marketplace, f"/api/v3/stocks/{warehouse_id}",
-                                json_body={"skus": skus})
 
     async def orders_archive(self, date_from: str, date_to: str | None = None,
                               limit: int = 1000, next_param: int = 0) -> dict:
@@ -774,59 +600,50 @@ class WBClient:
     # nm-report detail/grouped УДАЛЕНЫ из WB API (миграция завершена 12.2025).
     # Замена — воронка продаж v3 (sales-funnel). Лимит: 3 запроса/мин.
 
+    async def analytics_order_feed(self, body: dict[str, Any]) -> dict:
+        """POST /api/analytics/v1/order-feed — read-only order/sales feed with filters and snapshot pagination."""
+        return await self._post(self._analytics, "/api/analytics/v1/order-feed", body)
+
     async def analytics_sales_funnel(
         self, date_from: str, date_to: str,
         nm_ids: list[int] | None = None,
         brand_names: list[str] | None = None,
         subject_ids: list[int] | None = None,
+        tag_ids: list[int] | None = None,
+        past_period: dict[str, str] | None = None,
+        skip_deleted_nm: bool = False,
+        order_by: dict[str, str] | None = None,
         limit: int = 100, offset: int = 0,
     ) -> dict:
-        """POST /api/analytics/v3/sales-funnel/products — воронка продаж по карточкам.
-
-        Метрики: просмотры, клики, корзина, заказы, выручка, конверсии (+ сравнение периодов).
-        КРИТИЧНО: падение конверсий = проблема SEO или конкурент обошёл. Лимит 3/мин.
-        """
+        """POST /api/analytics/v3/sales-funnel/products — full sales funnel by product."""
+        if not 1 <= limit <= 1000:
+            raise ValueError("limit must be between 1 and 1000")
         body: dict[str, Any] = {
             "selectedPeriod": {"start": date_from, "end": date_to},
-            "orderBy": {"field": "openCard", "mode": "desc"},
+            "orderBy": order_by or {"field": "openCard", "mode": "desc"},
+            "skipDeletedNm": skip_deleted_nm,
             "limit": limit, "offset": offset,
         }
-        if nm_ids:
-            body["nmIds"] = nm_ids
-        if brand_names:
-            body["brandNames"] = brand_names
-        if subject_ids:
-            body["subjectIds"] = subject_ids
+        if nm_ids is not None: body["nmIds"] = nm_ids
+        if brand_names is not None: body["brandNames"] = brand_names
+        if subject_ids is not None: body["subjectIds"] = subject_ids
+        if tag_ids is not None: body["tagIds"] = tag_ids
+        if past_period is not None: body["pastPeriod"] = past_period
         return await self._post(self._analytics, "/api/analytics/v3/sales-funnel/products", body)
 
     async def analytics_sales_funnel_history(
         self, nm_ids: list[int], date_from: str, date_to: str,
-        aggregation_level: str = "day",
+        aggregation_level: str = "day", skip_deleted_nm: bool = False,
     ) -> dict:
-        """POST /api/analytics/v3/sales-funnel/products/history — воронка по дням (максимум последняя неделя)."""
+        """POST /api/analytics/v3/sales-funnel/products/history — per-product daily/weekly history."""
+        if not 1 <= len(nm_ids) <= 20:
+            raise ValueError("nm_ids must contain 1..20 WB item IDs")
         return await self._post(self._analytics, "/api/analytics/v3/sales-funnel/products/history", {
             "selectedPeriod": {"start": date_from, "end": date_to},
             "nmIds": nm_ids,
             "aggregationLevel": aggregation_level,
+            "skipDeletedNm": skip_deleted_nm,
         })
-
-    async def _task_report_flow(self, create_path: str, params: dict, task_prefix: str) -> Any:
-        """Общий flow асинхронных отчётов: создать задание → дождаться → скачать."""
-        import asyncio as _aio
-        created = await self._get(self._analytics, create_path, params)
-        task_id = (created.get("data") or {}).get("taskId") or created.get("taskId")
-        if not task_id:
-            return created
-        for _ in range(24):  # до ~2 минут ожидания
-            await _aio.sleep(5)
-            status = await self._get(self._analytics, f"{task_prefix}/tasks/{task_id}/status")
-            st = (status.get("data") or {}).get("status") or status.get("status")
-            if st == "done":
-                return await self._get(self._analytics, f"{task_prefix}/tasks/{task_id}/download")
-            if st in ("canceled", "purged", "error"):
-                return {"task_id": task_id, "status": st, "error": "Задание не выполнено"}
-        return {"task_id": task_id, "status": "timeout",
-                "hint": f"Отчёт ещё готовится. Скачать позже: GET {task_prefix}/tasks/{task_id}/download"}
 
     async def analytics_paid_storage(self, date_from: str, date_to: str) -> Any:
         """GET /api/v1/paid_storage (task-based) — отчёт по платному хранению.
@@ -837,6 +654,7 @@ class WBClient:
             "/api/v1/paid_storage", {"dateFrom": date_from, "dateTo": date_to}, "/api/v1/paid_storage",
         )
 
+
     async def analytics_warehouse_remains(self, group_by_nm: bool = True) -> Any:
         """GET /api/v1/warehouse_remains (task-based) — отчёт об остатках на складах WB."""
         params = {"groupByNm": str(group_by_nm).lower(), "groupBySize": "false"}
@@ -844,9 +662,11 @@ class WBClient:
             "/api/v1/warehouse_remains", params, "/api/v1/warehouse_remains",
         )
 
+
     async def analytics_antifraud(self, date: str) -> dict:
         """GET /api/v1/analytics/antifraud-details — удержания за самовыкупы (отчёт по средам)."""
         return await self._get(self._analytics, "/api/v1/analytics/antifraud-details", {"date": date})
+
 
     async def analytics_stocks_wb(self, nm_ids: list[int] | None = None,
                                   limit: int = 1000, offset: int = 0) -> dict:
@@ -859,6 +679,7 @@ class WBClient:
         if nm_ids:
             body["nmIds"] = nm_ids
         return await self._post(self._analytics, "/api/analytics/v1/stocks-report/wb-warehouses", body)
+
 
     async def analytics_stocks_report(self, date_from: str, date_to: str,
                                       nm_ids: list[int] | None = None,
@@ -875,16 +696,19 @@ class WBClient:
             body["nmIDs"] = nm_ids
         return await self._post(self._analytics, "/api/v2/stocks-report/products/products", body)
 
+
     async def analytics_excise_report(self, date_from: str, date_to: str) -> dict:
         """POST /api/v1/analytics/excise-report — отчёт по маркировке (Честный знак). Лимит 10 за 5 ч."""
         return await self._post_with_params(self._analytics, "/api/v1/analytics/excise-report",
                                             params={"dateFrom": date_from, "dateTo": date_to}, body={})
+
 
     async def analytics_acceptance_report(self, date_from: str, date_to: str) -> Any:
         """GET /api/v1/acceptance_report (task-based) — отчёт по платной приёмке."""
         return await self._task_report_flow(
             "/api/v1/acceptance_report", {"dateFrom": date_from, "dateTo": date_to}, "/api/v1/acceptance_report",
         )
+
 
     async def analytics_banned_products(self, shadowed: bool = False) -> dict:
         """GET /api/v1/analytics/banned-products/{blocked|shadowed} — заблокированные/скрытые карточки.
@@ -895,10 +719,12 @@ class WBClient:
         return await self._get(self._analytics, f"/api/v1/analytics/banned-products/{path}",
                                {"sort": "nmId", "order": "asc"})
 
+
     async def analytics_goods_return(self, date_from: str, date_to: str) -> dict:
         """GET /api/v1/analytics/goods-return — возвраты товаров продавцу (макс. 31 день)."""
         return await self._get(self._analytics, "/api/v1/analytics/goods-return",
                                {"dateFrom": date_from, "dateTo": date_to})
+
 
     async def analytics_deductions(self, date_to: str, date_from: str,
                                    limit: int = 100, offset: int = 0) -> dict:
@@ -912,34 +738,15 @@ class WBClient:
         }
         return await self._get(self._analytics, "/api/analytics/v1/deductions", params)
 
-    async def search_report(self, date_from: str, date_to: str,
-                            nm_ids: list[int] | None = None,
-                            limit: int = 30, offset: int = 0) -> dict:
-        """POST /api/v2/search-report/report — отчёт по поисковым запросам (Джем).
 
-        КРИТИЧНО: видимость в поиске = продажи. Лимит 3/мин.
-        """
-        body: dict[str, Any] = {
-            "currentPeriod": {"start": date_from, "end": date_to},
-            "positionCluster": "all",
-            "includeSearchTexts": True, "includeSubstitutedSKUs": False,
-            "orderBy": {"field": "openCard", "mode": "desc"},
-            "limit": limit, "offset": offset,
-        }
-        if nm_ids:
-            body["nmIds"] = nm_ids
+    async def search_report(self, body: dict[str, Any]) -> dict:
+        """POST /api/v2/search-report/report — full Jam search analytics main page."""
         return await self._post(self._analytics, "/api/v2/search-report/report", body)
 
-    async def search_texts_by_product(self, nm_ids: list[int], date_from: str, date_to: str,
-                                      limit: int = 30) -> dict:
-        """POST /api/v2/search-report/product/search-texts — топ поисковых запросов по товарам (≤30)."""
-        return await self._post(self._analytics, "/api/v2/search-report/product/search-texts", {
-            "currentPeriod": {"start": date_from, "end": date_to},
-            "nmIds": nm_ids,
-            "topOrderBy": "openCard",
-            "orderBy": {"field": "avgPosition", "mode": "asc"},
-            "limit": limit,
-        })
+    async def search_texts_by_product(self, body: dict[str, Any]) -> dict:
+        """POST /api/v2/search-report/product/search-texts — full Jam query analytics by product."""
+        return await self._post(self._analytics, "/api/v2/search-report/product/search-texts", body)
+
 
     async def analytics_item_rating(self, nm_ids: list[int]) -> dict:
         """POST /api/analytics/v1/item/rating — рейтинг товаров: просмотры, добавления в корзину, заказы.
@@ -949,49 +756,83 @@ class WBClient:
             nm_ids = nm_ids[:1000]
         return await self._post(self._analytics, "/api/analytics/v1/item/rating", {"nmIds": nm_ids})
 
+
     async def analytics_sales_funnel_grouped_history(
-        self, nm_ids: list[int], date_from: str, date_to: str,
+        self, date_from: str, date_to: str,
+        brand_names: list[str] | None = None,
+        subject_ids: list[int] | None = None,
+        tag_ids: list[int] | None = None,
+        skip_deleted_nm: bool = False,
         aggregation_level: str = "day",
     ) -> dict:
-        """POST /api/analytics/v3/sales-funnel/grouped/history — воронка продаж по группам/дням."""
-        return await self._post(self._analytics, "/api/analytics/v3/sales-funnel/grouped/history", {
+        """POST /api/analytics/v3/sales-funnel/grouped/history — grouped funnel by subject/brand/tag."""
+        body: dict[str, Any] = {
             "selectedPeriod": {"start": date_from, "end": date_to},
-            "nmIds": nm_ids,
+            "skipDeletedNm": skip_deleted_nm,
             "aggregationLevel": aggregation_level,
-        })
+        }
+        if brand_names is not None: body["brandNames"] = brand_names
+        if subject_ids is not None: body["subjectIds"] = subject_ids
+        if tag_ids is not None: body["tagIds"] = tag_ids
+        return await self._post(self._analytics, "/api/analytics/v3/sales-funnel/grouped/history", body)
 
-    async def nm_report(self, nm_ids: list[int] | None = None,
-                        date_from: str | None = None, date_to: str | None = None) -> Any:
-        """POST /api/v2/nm-report/downloads — создать и скачать отчёт по номенклатуре (task-based).
-        Содержит: выручка, заказы, возвраты, среднее в корзине, конверсии по каждому nmID.
-        Ждёт готовности (до 3 минут). Отчёт хранится 3 дня.
-        """
-        body: dict[str, Any] = {}
-        if nm_ids:
-            body["nmIds"] = nm_ids
-        if date_from and date_to:
-            body["period"] = {"start": date_from, "end": date_to}
-        # Создаём задание
-        created = await self._post(self._analytics, "/api/v2/nm-report/downloads", body)
-        report_id = (created.get("data") or {}).get("id") or created.get("id")
-        if not report_id:
-            return created
-        # Ждём готовности
-        import asyncio as _aio
-        for _ in range(36):  # до 3 минут
-            await _aio.sleep(5)
-            reports = await self._get(self._analytics, "/api/v2/nm-report/downloads")
-            items = (reports.get("data") or {}).get("reports") or reports.get("reports") or []
-            found = next((r for r in items if r.get("id") == report_id), None)
-            if found:
-                status = found.get("status")
-                if status == "done":
-                    dl = await self._get(self._analytics, f"/api/v2/nm-report/downloads/file/{report_id}")
-                    return dl
-                if status in ("error", "canceled"):
-                    return {"report_id": report_id, "status": status}
-        return {"report_id": report_id, "status": "timeout",
-                "hint": "Отчёт ещё готовится. Вызови позже."}
+    async def analytics_csv_report_create(self, report_id: str, report_type: str,
+                                          params: dict[str, Any],
+                                          user_report_name: str | None = None) -> Any:
+        """Create a Seller Analytics CSV export job. This creates only a report task, never seller data."""
+        allowed = {
+            "DETAIL_HISTORY_REPORT", "GROUPED_HISTORY_REPORT",
+            "SEARCH_QUERIES_PREMIUM_REPORT_GROUP",
+            "SEARCH_QUERIES_PREMIUM_REPORT_PRODUCT",
+            "SEARCH_QUERIES_PREMIUM_REPORT_TEXT",
+            "STOCK_HISTORY_REPORT_CSV", "STOCK_HISTORY_DAILY_CSV",
+        }
+        if report_type not in allowed:
+            raise ValueError(f"Unsupported reportType: {report_type}")
+        body: dict[str, Any] = {"id": report_id, "reportType": report_type, "params": params}
+        if user_report_name:
+            body["userReportName"] = user_report_name
+        return await self._post(self._analytics, "/api/v2/nm-report/downloads", body)
+
+    async def analytics_csv_reports_list(self, download_ids: list[str] | None = None) -> Any:
+        """GET /api/v2/nm-report/downloads — list Seller Analytics CSV report jobs and statuses."""
+        params = {"filter[downloadIds]": download_ids} if download_ids else None
+        return await self._get(self._analytics, "/api/v2/nm-report/downloads", params)
+
+    async def analytics_csv_report_retry(self, download_id: str) -> Any:
+        """Retry a failed CSV report generation task; does not alter seller catalogue or settings."""
+        return await self._post(self._analytics, "/api/v2/nm-report/downloads/retry",
+                                {"downloadId": download_id})
+
+    async def analytics_csv_report_download(self, download_id: str) -> Any:
+        """GET CSV report ZIP and return decoded CSV files; report task is read-only."""
+        path = f"/api/v2/nm-report/downloads/file/{download_id}"
+        delay = 1.0
+        for attempt in range(5):
+            response = await self._analytics.get(path)
+            if response.status_code in self._RETRY_STATUSES and attempt < 4:
+                retry_after = response.headers.get("Retry-After", "")
+                try: wait = float(retry_after) if retry_after else delay
+                except ValueError: wait = delay
+                await asyncio.sleep(min(wait, 15.0))
+                delay = min(delay * 2, 15.0)
+                continue
+            disabled = self._temporarily_disabled(response)
+            if disabled is not None: return disabled
+            response.raise_for_status()
+            try:
+                with zipfile.ZipFile(io.BytesIO(response.content)) as archive:
+                    files = {}
+                    for name in archive.namelist():
+                        if name.endswith("/"): continue
+                        raw = archive.read(name)
+                        files[name] = raw.decode("utf-8-sig", errors="replace")
+                    return {"download_id": download_id, "files": files}
+            except zipfile.BadZipFile:
+                return {"download_id": download_id, "content_type": response.headers.get("Content-Type"),
+                        "error": "WB response is not a valid ZIP archive",
+                        "body_preview": response.text[:2000]}
+        raise RuntimeError("WB CSV report download failed after retries")
 
     async def stocks_report_sizes(self, nm_ids: list[int] | None = None,
                                    date_from: str | None = None, date_to: str | None = None,
@@ -1037,18 +878,6 @@ class WBClient:
             params["payment_type"] = payment_type
         return await self._get(self._advert, "/api/advert/v2/adverts", params)
 
-    async def advert_create(self, name: str, nm_ids: list[int], bid_type: str = "unified",
-                            payment_type: str = "cpm", placement_types: list[str] | None = None) -> Any:
-        """POST /adv/v2/seacat/save-ad — создать кампанию (единственный способ с 2026).
-
-        bid_type: manual | unified. payment_type: cpm | cpc.
-        placement_types (только для manual): search, recommendations.
-        """
-        body: dict[str, Any] = {"name": name, "nms": nm_ids, "bid_type": bid_type, "payment_type": payment_type}
-        if placement_types and bid_type == "manual":
-            body["placement_types"] = placement_types
-        return await self._post(self._advert, "/adv/v2/seacat/save-ad", body)
-
     async def advert_statistics(self, advert_ids: list[int], date_from: str, date_to: str) -> Any:
         """GET /adv/v3/fullstats — статистика кампаний (вкл. дневную детализацию в days[]).
 
@@ -1068,42 +897,9 @@ class WBClient:
         """GET /adv/v1/budget — бюджет конкретной кампании."""
         return await self._get(self._advert, "/adv/v1/budget", {"id": advert_id})
 
-    async def advert_budget_deposit(self, advert_id: int, amount: int, source: int = 0) -> dict:
-        """POST /adv/v1/budget/deposit?id= — пополнить бюджет кампании.
-
-        source: 0 = счёт, 1 = баланс, 3 = бонусы.
-        """
-        return await self._post_with_params(self._advert, "/adv/v1/budget/deposit",
-                                            params={"id": advert_id},
-                                            body={"sum": amount, "type": source, "return": True})
-
     async def advert_costs_history(self, date_from: str, date_to: str) -> Any:
         """GET /adv/v1/upd — история затрат на рекламу за период."""
         return await self._get(self._advert, "/adv/v1/upd", {"from": date_from, "to": date_to})
-
-    async def advert_start(self, advert_id: int) -> Any:
-        """GET /adv/v0/start — запустить рекламную кампанию."""
-        return await self._get(self._advert, "/adv/v0/start", {"id": advert_id})
-
-    async def advert_pause(self, advert_id: int) -> Any:
-        """GET /adv/v0/pause — приостановить кампанию. КРИТИЧНО: экстренная остановка убыточной кампании."""
-        return await self._get(self._advert, "/adv/v0/pause", {"id": advert_id})
-
-    async def advert_stop(self, advert_id: int) -> Any:
-        """GET /adv/v0/stop — завершить кампанию."""
-        return await self._get(self._advert, "/adv/v0/stop", {"id": advert_id})
-
-    async def advert_delete(self, advert_id: int) -> Any:
-        """GET /adv/v0/delete — удалить кампанию (необратимо, ~10 мин)."""
-        return await self._get(self._advert, "/adv/v0/delete", {"id": advert_id})
-
-    async def advert_bids_set(self, bids: list[dict]) -> Any:
-        """PATCH /api/advert/v1/bids — изменить ставки CPM/CPC.
-
-        bids: [{advert_id, nm_bids: [{nm_id, bid_kopecks, placement: search|recommendations|combined}]}]
-        Ставки в КОПЕЙКАХ. combined — для unified-кампаний.
-        """
-        return await self._patch(self._advert, "/api/advert/v1/bids", {"bids": bids})
 
     async def advert_bids_recommendations(self, nm_id: int, advert_id: int) -> Any:
         """GET /api/advert/v0/bids/recommendations — рекомендуемые ставки для карточки."""
@@ -1128,13 +924,6 @@ class WBClient:
         path = "/adv/v1/normquery/stats" if daily else "/adv/v0/normquery/stats"
         return await self._post(self._advert, path, body)
 
-    async def advert_cluster_bids_set(self, bids: list[dict]) -> Any:
-        """POST /adv/v0/normquery/bids — ставки на конкретные кластеры.
-
-        bids: [{advert_id, nm_id, norm_query, bid}] — bid в РУБЛЯХ за 1000 показов.
-        """
-        return await self._post(self._advert, "/adv/v0/normquery/bids", {"bids": bids})
-
     async def advert_minus_phrases_get(self, advert_id: int, nm_id: int | None = None) -> Any:
         """POST /adv/v0/normquery/get-minus — минус-фразы кампании."""
         body: dict[str, Any] = {"advert_id": advert_id}
@@ -1142,24 +931,9 @@ class WBClient:
             body["nm_id"] = nm_id
         return await self._post(self._advert, "/adv/v0/normquery/get-minus", body)
 
-    async def advert_minus_phrases_set(self, advert_id: int, nm_id: int, norm_queries: list[str]) -> Any:
-        """POST /adv/v0/normquery/set-minus — установить минус-фразы (плюс-фраз с 2026 нет)."""
-        return await self._post(self._advert, "/adv/v0/normquery/set-minus",
-                                {"advert_id": advert_id, "nm_id": nm_id, "norm_queries": norm_queries})
-
-    # ── Доп. инструменты рекламы ─────────────────────────────
-
     async def advert_payments(self, date_from: str, date_to: str) -> Any:
         """GET /adv/v1/payments — история пополнений рекламного счёта за период (даты YYYY-MM-DD)."""
         return await self._get(self._advert, "/adv/v1/payments", {"from": date_from, "to": date_to})
-
-    async def advert_rename(self, advert_id: int, name: str) -> Any:
-        """POST /adv/v0/rename — переименовать кампанию."""
-        return await self._post(self._advert, "/adv/v0/rename", {"advertId": advert_id, "name": name})
-
-    # ═══════════════════════════════════════════════════════════
-    # FEEDBACKS API — Отзывы
-    # ═══════════════════════════════════════════════════════════
 
     async def feedbacks_list(
         self, is_answered: bool | None = None, take: int = 50, skip: int = 0,
@@ -1175,14 +949,6 @@ class WBClient:
         if nm_id is not None:
             params["nmId"] = nm_id
         return await self._get(self._feedbacks, "/api/v1/feedbacks", params)
-
-    async def feedback_reply(self, feedback_id: str, text: str, edit: bool = False) -> dict:
-        """POST|PATCH /api/v1/feedbacks/answer — ответить на отзыв / отредактировать ответ.
-
-        Старый PATCH /api/v1/feedbacks удалён из WB API.
-        """
-        method = self._patch if edit else self._post
-        return await method(self._feedbacks, "/api/v1/feedbacks/answer", {"id": feedback_id, "text": text})
 
     async def feedbacks_count(self) -> dict:
         """GET /api/v1/feedbacks/count-unanswered — количество неотвеченных отзывов."""
@@ -1203,19 +969,6 @@ class WBClient:
         """GET /api/feedbacks/v1/pins/count — количество закреплённых отзывов."""
         return await self._get(self._feedbacks, "/api/feedbacks/v1/pins/count")
 
-    async def feedbacks_pins_set(self, feedback_ids: list[str]) -> dict:
-        """POST /api/feedbacks/v1/pins — закрепить отзывы (≤3 на nmID). Требует Джем."""
-        return await self._post(self._feedbacks, "/api/feedbacks/v1/pins", {"feedbackIds": feedback_ids})
-
-    async def feedbacks_pins_delete(self, feedback_ids: list[str]) -> dict:
-        """DELETE /api/feedbacks/v1/pins — открепить отзывы."""
-        return await self._send("DELETE", self._feedbacks, "/api/feedbacks/v1/pins",
-                                json_body={"feedbackIds": feedback_ids})
-
-    # ═══════════════════════════════════════════════════════════
-    # QUESTIONS API — Вопросы покупателей
-    # ═══════════════════════════════════════════════════════════
-
     async def questions_list(
         self, is_answered: bool | None = None, take: int = 50, skip: int = 0,
         order: str = "dateDesc", nm_id: int | None = None,
@@ -1227,14 +980,6 @@ class WBClient:
         if nm_id is not None:
             params["nmId"] = nm_id
         return await self._get(self._questions, "/api/v1/questions", params)
-
-    async def question_reply(self, question_id: str, text: str, reject: bool = False) -> dict:
-        """PATCH /api/v1/questions — ответить на вопрос (state=wbRu) или отклонить (state=none)."""
-        return await self._patch(self._questions, "/api/v1/questions", {
-            "id": question_id,
-            "answer": {"text": text},
-            "state": "none" if reject else "wbRu",
-        })
 
     async def questions_count(self) -> dict:
         """GET /api/v1/questions/count-unanswered — количество неотвеченных вопросов."""
@@ -1260,22 +1005,6 @@ class WBClient:
         if claim_id:
             params["id"] = claim_id
         return await self._get(self._returns, "/api/v1/claims", params)
-
-    async def returns_claim_answer(self, claim_id: str, action: str, comment: str | None = None) -> dict:
-        """PATCH /api/v1/claim — ответ на заявку возврата.
-
-        action — строго из массива actions заявки: approve1 (проверка брака на складе WB),
-        approve2 (забрать товар себе), autorefund1 (без возврата товара),
-        reject1/reject2/reject3 (шаблоны WB), rejectcustom (свой комментарий — comment обязателен).
-        """
-        body: dict[str, Any] = {"id": claim_id, "action": action}
-        if comment:
-            body["comment"] = comment
-        return await self._patch(self._returns, "/api/v1/claim", body)
-
-    # ═══════════════════════════════════════════════════════════
-    # TARIFFS API — Тарифы логистики и хранения
-    # ═══════════════════════════════════════════════════════════
 
     @staticmethod
     def _date_or_today(date: str | None) -> str:
@@ -1374,19 +1103,6 @@ class WBClient:
             params["next"] = next_cursor
         return await self._get(self._buyer_chat, "/api/v1/seller/events", params)
 
-    async def buyer_chat_send(self, reply_sign: str, message: str) -> dict:
-        """POST /api/v1/seller/message — отправить сообщение в чат (multipart, ≤1000 символов).
-
-        reply_sign — из объекта чата (buyer_chats_list).
-        """
-        # files с (None, value) заставляет httpx собрать multipart/form-data
-        r = await self._buyer_chat.post(
-            "/api/v1/seller/message",
-            files={"replySign": (None, reply_sign), "message": (None, message)},
-        )
-        r.raise_for_status()
-        return r.json() if r.content else {}
-
     async def buyer_chat_download(self, file_id: str) -> dict:
         """GET /api/v1/seller/download/{id} — получить файл из чата покупателя."""
         return await self._get(self._buyer_chat, f"/api/v1/seller/download/{file_id}")
@@ -1436,43 +1152,9 @@ class WBClient:
     # CONTENT API — расширение (объединение карточек, медиафайл, категории)
     # ═══════════════════════════════════════════════════════════
 
-    async def cards_move_nm(self, nm_ids: list[int], target_imt: int | None = None) -> dict:
-        """POST /content/v2/cards/moveNm — объединить/разъединить карточки (≤30 nmID).
-
-        target_imt задан → объединить в этот imtID; не задан → разъединить (новые imtID).
-        """
-        body: dict[str, Any] = {"nmIDs": nm_ids}
-        if target_imt is not None:
-            body["targetIMT"] = target_imt
-        return await self._post(self._content, "/content/v2/cards/moveNm", body)
-
-    async def card_add_nomenclature(self, imt_id: int, cards_to_add: list[dict]) -> dict:
-        """POST /content/v2/cards/upload/add — добавить номенклатуру/размер в существующую карточку (imtID)."""
-        return await self._post(self._content, "/content/v2/cards/upload/add",
-                                {"imtID": imt_id, "cardsToAdd": cards_to_add})
-
     async def categories_parent(self, locale: str = "ru") -> dict:
         """GET /content/v2/object/parent/all — все родительские категории товаров."""
         return await self._get(self._content, "/content/v2/object/parent/all", {"locale": locale})
-
-    async def media_upload_file(self, nm_id: int, photo_number: int, file_url: str) -> dict:
-        """POST /content/v3/media/file — загрузить медиа ФАЙЛОМ (скачиваем по file_url и шлём multipart).
-
-        photo_number: позиция (с 1). Для видео = 1. Чтобы добавить фото — номер больше числа уже загруженных.
-        """
-        async with httpx.AsyncClient(timeout=httpx.Timeout(60.0, read=120.0)) as dl:
-            resp = await dl.get(file_url)
-            resp.raise_for_status()
-            content = resp.content
-        headers = {"X-Nm-Id": str(nm_id), "X-Photo-Number": str(photo_number)}
-        r = await self._content.post("/content/v3/media/file", headers=headers,
-                                     files={"uploadfile": ("upload", content)})
-        r.raise_for_status()
-        return r.json() if r.content else {}
-
-    # ═══════════════════════════════════════════════════════════
-    # MARKETPLACE — маркировка заказов (КИЗ), пропуска, короба (trbx)
-    # ═══════════════════════════════════════════════════════════
 
     @staticmethod
     def _meta_body(meta_type: str, value: Any) -> dict:
@@ -1484,19 +1166,6 @@ class WBClient:
     async def order_meta_get(self, order_id: int) -> dict:
         """GET /api/v3/orders/{id}/meta — метаданные/маркировка заказа FBS (доступные ключи из requiredMeta)."""
         return await self._get(self._marketplace, f"/api/v3/orders/{order_id}/meta")
-
-    async def order_meta_set(self, order_id: int, meta_type: str, value: Any) -> dict:
-        """PUT /api/v3/orders/{id}/meta/{type} — задать маркировку: sgtin|uin|imei|gtin|expiration.
-
-        Только для заказа в статусе confirm. sgtin — список Data Matrix; uin=16, imei=15, gtin=13 символов;
-        expiration — дата dd.mm.yyyy (≥30 дней).
-        """
-        return await self._put(self._marketplace, f"/api/v3/orders/{order_id}/meta/{meta_type}",
-                               self._meta_body(meta_type, value))
-
-    async def order_meta_delete(self, order_id: int, key: str) -> Any:
-        """DELETE /api/v3/orders/{id}/meta?key= — удалить метаданные по ключу (imei|uin|gtin|sgtin)."""
-        return await self._delete(self._marketplace, f"/api/v3/orders/{order_id}/meta", {"key": key})
 
     async def orders_status_history(self, order_ids: list[int]) -> dict:
         """POST /api/v3/orders/status/history — история статусов (трансграничные заказы, ≤100)."""
@@ -1523,39 +1192,9 @@ class WBClient:
         """GET /api/v3/passes — список действующих пропусков."""
         return await self._get(self._marketplace, "/api/v3/passes")
 
-    async def pass_create(self, first_name: str, last_name: str, car_model: str,
-                          car_number: str, office_id: int) -> dict:
-        """POST /api/v3/passes — создать пропуск (действует 48 ч)."""
-        return await self._post(self._marketplace, "/api/v3/passes", {
-            "firstName": first_name, "lastName": last_name,
-            "carModel": car_model, "carNumber": car_number, "officeId": office_id,
-        })
-
-    async def pass_update(self, pass_id: int, first_name: str, last_name: str, car_model: str,
-                          car_number: str, office_id: int) -> Any:
-        """PUT /api/v3/passes/{id} — обновить пропуск."""
-        return await self._put(self._marketplace, f"/api/v3/passes/{pass_id}", {
-            "firstName": first_name, "lastName": last_name,
-            "carModel": car_model, "carNumber": car_number, "officeId": office_id,
-        })
-
-    async def pass_delete(self, pass_id: int) -> Any:
-        """DELETE /api/v3/passes/{id} — удалить пропуск."""
-        return await self._delete(self._marketplace, f"/api/v3/passes/{pass_id}")
-
-    # ── Короба поставки FBS (trbx) ────────────────────────────
     async def supply_trbx_list(self, supply_id: str) -> dict:
         """GET /api/v3/supplies/{id}/trbx — короба поставки."""
         return await self._get(self._marketplace, f"/api/v3/supplies/{supply_id}/trbx")
-
-    async def supply_trbx_add(self, supply_id: str, amount: int) -> dict:
-        """POST /api/v3/supplies/{id}/trbx — добавить короба (amount 1..1000, только для ПВЗ при сборке)."""
-        return await self._post(self._marketplace, f"/api/v3/supplies/{supply_id}/trbx", {"amount": amount})
-
-    async def supply_trbx_delete(self, supply_id: str, trbx_ids: list[str]) -> Any:
-        """DELETE /api/v3/supplies/{id}/trbx — удалить короба."""
-        return await self._send("DELETE", self._marketplace, f"/api/v3/supplies/{supply_id}/trbx",
-                                json_body={"trbxIds": trbx_ids})
 
     async def supply_trbx_stickers(self, supply_id: str, trbx_ids: list[str], sticker_type: str = "png") -> dict:
         """POST /api/v3/supplies/{id}/trbx/stickers?type= — QR-стикеры коробов (svg|zplv|zplh|png)."""
@@ -1591,31 +1230,9 @@ class WBClient:
         """POST /api/v3/dbs/groups/info — стоимость платной доставки по groupId (≤1000)."""
         return await self._post(self._marketplace, "/api/v3/dbs/groups/info", {"groups": group_ids})
 
-    async def dbs_order_action(self, order_id: int, action: str, code: str | None = None) -> Any:
-        """PATCH /api/v3/dbs/orders/{id}/{action} — confirm|deliver|receive|reject|cancel.
-
-        receive/reject требуют code (код подтверждения покупателя).
-        """
-        path = f"/api/v3/dbs/orders/{order_id}/{action}"
-        body = {"code": code} if action in ("receive", "reject") and code is not None else None
-        return await self._send("PATCH", self._marketplace, path, json_body=body)
-
     async def dbs_order_meta_get(self, order_id: int) -> dict:
         """GET /api/v3/dbs/orders/{id}/meta — метаданные DBS-заказа."""
         return await self._get(self._marketplace, f"/api/v3/dbs/orders/{order_id}/meta")
-
-    async def dbs_order_meta_set(self, order_id: int, meta_type: str, value: Any) -> Any:
-        """PUT /api/v3/dbs/orders/{id}/meta/{type} — sgtin|uin|imei|gtin (статус confirm)."""
-        return await self._put(self._marketplace, f"/api/v3/dbs/orders/{order_id}/meta/{meta_type}",
-                               self._meta_body(meta_type, value))
-
-    async def dbs_order_meta_delete(self, order_id: int, key: str) -> Any:
-        """DELETE /api/v3/dbs/orders/{id}/meta?key= — удалить метаданные."""
-        return await self._delete(self._marketplace, f"/api/v3/dbs/orders/{order_id}/meta", {"key": key})
-
-    # ═══════════════════════════════════════════════════════════
-    # CLICK-COLLECT — самовывоз (marketplace-api)
-    # ═══════════════════════════════════════════════════════════
 
     async def cc_orders_new(self) -> dict:
         """GET /api/v3/click-collect/orders/new — новые задания самовывоза."""
@@ -1639,27 +1256,9 @@ class WBClient:
         return await self._post(self._marketplace, "/api/v3/click-collect/orders/client/identity",
                                 {"orderCode": order_code, "passcode": passcode})
 
-    async def cc_order_action(self, order_id: int, action: str) -> Any:
-        """PATCH /api/v3/click-collect/orders/{id}/{action} — confirm|prepare|receive|reject|cancel."""
-        return await self._send("PATCH", self._marketplace,
-                                f"/api/v3/click-collect/orders/{order_id}/{action}", json_body=None)
-
     async def cc_order_meta_get(self, order_id: int) -> dict:
         """GET /api/v3/click-collect/orders/{id}/meta — метаданные задания."""
         return await self._get(self._marketplace, f"/api/v3/click-collect/orders/{order_id}/meta")
-
-    async def cc_order_meta_set(self, order_id: int, meta_type: str, value: Any) -> Any:
-        """PUT /api/v3/click-collect/orders/{id}/meta/{type} — sgtin|uin|imei|gtin (статус confirm)."""
-        return await self._put(self._marketplace, f"/api/v3/click-collect/orders/{order_id}/meta/{meta_type}",
-                               self._meta_body(meta_type, value))
-
-    async def cc_order_meta_delete(self, order_id: int, key: str) -> Any:
-        """DELETE /api/v3/click-collect/orders/{id}/meta?key= — удалить метаданные."""
-        return await self._delete(self._marketplace, f"/api/v3/click-collect/orders/{order_id}/meta", {"key": key})
-
-    # ═══════════════════════════════════════════════════════════
-    # ANALYTICS — расширение (доля бренда, регионы, маркировка, поиск)
-    # ═══════════════════════════════════════════════════════════
 
     async def analytics_brand_share(self, parent_id: int, brand: str, date_from: str, date_to: str) -> dict:
         """GET /api/v1/analytics/brand-share — доля бренда в категории (≤365 дней, YYYY-MM-DD)."""
@@ -1694,7 +1293,9 @@ class WBClient:
 
     async def search_product_orders(self, nm_id: int, search_texts: list[str],
                                     date_from: str, date_to: str) -> dict:
-        """POST /api/v2/search-report/product/orders — заказы/позиции по запросам для товара (≤7 дней, Джем)."""
+        """POST /api/v2/search-report/product/orders — orders and positions by query (max 7 days)."""
+        if not 1 <= len(search_texts) <= 100:
+            raise ValueError("search_texts must contain 1..100 phrases (100 only on Advanced/Premium Jam)")
         return await self._post(self._analytics, "/api/v2/search-report/product/orders", {
             "period": {"start": date_from, "end": date_to}, "nmId": nm_id, "searchTexts": search_texts})
 
@@ -1705,16 +1306,6 @@ class WBClient:
     async def new_feedbacks_questions(self) -> dict:
         """GET /api/v1/new-feedbacks-questions — флаги непросмотренных отзывов/вопросов."""
         return await self._get(self._feedbacks, "/api/v1/new-feedbacks-questions")
-
-    async def feedbacks_actions(self, feedback_id: str, feedback_valuation: int | None = None,
-                                product_valuation: int | None = None) -> Any:
-        """POST /api/v1/feedbacks/actions — жалоба на отзыв / проблема с товаром (коды из supplier-valuations)."""
-        body: dict[str, Any] = {"id": feedback_id}
-        if feedback_valuation is not None:
-            body["supplierFeedbackValuation"] = feedback_valuation
-        if product_valuation is not None:
-            body["supplierProductValuation"] = product_valuation
-        return await self._post(self._feedbacks, "/api/v1/feedbacks/actions", body)
 
     async def question_get(self, question_id: str) -> dict:
         """GET /api/v1/question?id= — один вопрос покупателя по ID."""

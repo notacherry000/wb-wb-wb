@@ -10,28 +10,23 @@
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](pyproject.toml)
-[![MCP tools](https://img.shields.io/badge/MCP%20tools-197-orange.svg)](docs/tools.md)
+[![MCP tools](https://img.shields.io/badge/MCP%20tools-143-orange.svg)](docs/tools.md)
 [![PyPI](https://img.shields.io/pypi/v/wb-mcp-server.svg)](https://pypi.org/project/wb-mcp-server/)
 [![Transport](https://img.shields.io/badge/transport-stdio%20%7C%20SSE-lightgrey.svg)](#how-it-works)
 
-**Run your Wildberries stores from a chat with an AI assistant.**
-197 tools covering the Wildberries Seller API — product cards, prices, ads, shipments,
-reviews, finance, analytics — exposed to Claude, Cursor, Copilot, Gemini CLI and any
-other MCP client. Built for WB sellers (Wildberries is Russia's largest marketplace)
-who run one or several seller accounts and would rather ask a question than click
-through the seller portal.
+**Analyze your Wildberries seller data from an AI assistant.**
+143 read-only Seller API tools are exposed to Claude, ChatGPT, Codex and other MCP clients.
+The server cannot create, modify, or delete seller-account data.
 
 Selling on Ozon too? There is [the same server for Ozon](https://github.com/DeviceIngineering/ozon-mcp-server).
 
-The server has been in daily use for more than five months across roughly twenty WB seller
-accounts, with 197 tools. It is the author's own working tool and is updated as the author
-needs it — [details here](#updates-and-support).
+This fork preserves the original architecture: multi-store support, Docker, diagnostics, rate-limit handling and reliability mechanisms.
 
 ```
 You: Which of my product cards are blocked, and why?
-You: Show ad cost share for every campaign this week and pause the ones above 15%.
+You: Show ad cost share for every campaign this week and compare campaign performance.
 You: Which warehouses currently have an intake coefficient of 0 or 1?
-You: Reply to every new 5-star review with a thank-you note.
+You: List new 5-star reviews and group them by product.
 ```
 
 ![WB MCP Server dashboard](https://raw.githubusercontent.com/DeviceIngineering/wb-mcp-server/main/docs/img/dashboard.png)
@@ -40,42 +35,15 @@ You: Reply to every new 5-star review with a thank-you note.
 
 ## What it can do
 
-197 tools, grouped by Wildberries Seller API area.
-The full numbered list with a description of each one is in **[docs/tools.md](docs/tools.md)**.
+**143 read-only Seller API tools.** The current catalogue is documented in [docs/tools.md](docs/tools.md). Complete public WB Jam read-only API coverage is documented in [docs/wb-jam-api.md](docs/wb-jam-api.md).
 
-| Area | Tools | What it covers |
-|---|---:|---|
-| Product cards | 26 | card list and details, create and update, SEO text, attributes, barcodes, media, tags, trash bin, **cards with errors and blocks** |
-| Prices and discounts | 7 | current prices, setting prices and discounts, price quarantine, WB Club (WB's paid membership discounts), B2B, upload status |
-| Promotions | 7 | promotion calendar, auto-promotions, an audit of "where WB has already enrolled your products", joining and leaving a promotion |
-| Advertising | 22 | campaign list and creation, statistics and ad cost share, bids and bid recommendations, keyword clusters and negative phrases, balance and top-ups |
-| Analytics | 25 | sales funnel v3 (per-product views → cart → order conversion), day-by-day history, stock, anti-fraud, paid intake, measurement penalties, brand share, sales by region, search queries |
-| Statistics | 3 | sales, orders, stock (statistics-api) |
-| FBS orders | 29 | new and all assembly tasks, statuses, cancellation, labels, supplies, boxes, warehouse passes, KIZ marking codes (Russia's mandatory product marking). FBS = fulfilled by seller from WB warehouse pickup |
-| DBS orders | 10 | delivery by seller: orders, statuses, actions, delivery dates, metadata |
-| Click & collect | 9 | pickup orders, buyer identity confirmation, actions and metadata |
-| FBW supplies | 6 | shipments into WB warehouses, goods in a shipment, warehouses, **intake coefficients for the next 14 days** |
-| Seller warehouses and stock | 8 | seller warehouses, updating and reading stock |
-| Finance | 7 | sales reports, detailed breakdown, acquiring, balance, seller profile |
-| Tariffs and storage | 6 | box and pallet tariffs, return tariffs, commissions, FBW transit, paid storage |
-| Reviews and questions | 18 | reviews and questions, replies, per-period counters, archive, pinned reviews, seller rating |
-| Returns | 3 | return requests, answering a request, returns report |
-| Buyer chats | 4 | chats, events, sending messages, downloading attachments |
-| Documents | 4 | document categories, list, single and bulk download |
-| Users | 2 | staff members and invitations |
-| WB Jam | 1 | WB Jam subscription status (WB's paid analytics add-on) |
-| Shops | 1 | list of connected seller accounts |
-| Diagnostics | 4 | self-diagnostics, token inspection, tool degradations, WB API news |
+Coverage includes product cards and catalogues, prices and upload history, promotions calendar, advertising campaigns and statistics, FBS/DBS/click & collect orders, supplies and stock, finance reports, tariffs, reviews and questions, returns, read-only buyer chat access, documents, sales and search analytics.
 
-Three things similar servers usually do not have:
+Extended **WB Джем (WB Jam)** analytics include the sales funnel, search queries, positions and clusters, detailed search reports, product-level analytics and the complete documented CSV export workflow (create job, list status, retry failed job, download ZIP/CSV). See [docs/wb-jam-api.md](docs/wb-jam-api.md) for endpoint-by-endpoint coverage. Features available only inside the seller portal and not exposed by the public Seller API are explicitly listed as unsupported.
 
-- **Multi-store.** Every call takes a `shop_id`, so two WB seller accounts live in one
-  conversation. With a single store you can omit `shop_id` entirely.
-- **WB API diagnostics.** The server pings WB hosts by itself, sends one cheap probe
-  request per API category, decodes the token's expiry and scopes, and highlights
-  "degradations": a tool that used to work and now fails consistently — a reliable sign
-  that WB changed the API.
-- **Encrypted tokens.** WB tokens are stored encrypted (Fernet), not in your client's config.
+Data mutation is removed at three levels: MCP tool catalogue, dispatch layer and HTTP client. There are no tools for changing cards, prices, discounts, ad bids, stock, orders, review replies or buyer messages. Some WB read endpoints use HTTP POST for retrieval; these remain available because the HTTP verb does not make them data mutations.
+
+The fork retains multi-store support, Docker, web dashboard, token/API diagnostics, degradation history, retries for transient failures, WB rate-limit handling and encrypted token storage.
 
 ## Quick start
 
@@ -194,6 +162,7 @@ and variants with and without an auth token.
 
 | Client | SSE directly | Guide |
 |---|---|---|
+| ChatGPT | yes, remote HTTPS MCP | [docs/install-chatgpt.md](docs/install-chatgpt.md) |
 | Claude Code | yes | [docs/install-claude-code.md](docs/install-claude-code.md) |
 | Claude Desktop | no → `mcp-remote` bridge or local stdio | [docs/install-claude-desktop.md](docs/install-claude-desktop.md) |
 | Cursor | yes | [docs/install-cursor.md](docs/install-cursor.md) |
@@ -220,7 +189,7 @@ claude mcp list      # expected: wildberries ... ✔ Connected
 ## Multi-store and security
 
 **Several seller accounts.** Stores are added on `/shops`; each one gets its own `shop_id`.
-`wb_list_shops` returns the list, and 200 of the 197 tools take `shop_id` as their first
+`wb_list_shops` returns the list, and 142 of the 143 tools take `shop_id` as their first
 parameter (the exceptions are `wb_list_shops` and `wb_degradations`).
 With a single store the parameter can be omitted — the server substitutes the only one available.
 
@@ -370,7 +339,7 @@ than estimated — `scripts/collect_corpus.py` takes a snapshot of read-only too
 (PII masked before anything is written to disk, the corpus stays out of the repo),
 `scripts/measure_corpus.py` reports what it costs.
 
-**Definitions.** 197 tools cost **17 700 tokens** with a single store configured,
+**Definitions.** The read-only catalogue now contains 143 tools; context usage depends on the active profile and client,
 down from 27 460. Descriptions are one sentence each, `shop_id` is dropped from the
 schemas when only one store exists (the server fills it in), and empty schema fields
 are not serialised.
@@ -434,7 +403,7 @@ whole — profiles are for them.
   prices and start ad campaigns.
 - **Dispatch through dictionaries, not an if-chain.** `NO_CLIENT_DISPATCH`,
   `CLIENT_DISPATCH` and `SHOP_DISPATCH` map names to handlers, and a test asserts that
-  every tool has one and no handler is orphaned. With 197 tools an if-chain rots quietly.
+  every tool has one and no handler is orphaned. With a large tool catalogue an if-chain rots quietly.
 - **The server diagnoses itself.** `wb_diagnostics` pings every WB host and runs a
   light real request per API category; `wb_degradations` reports which tools used to
   work and now fail steadily. Marketplace APIs change without notice — the question
@@ -511,7 +480,7 @@ Non-obvious details:
 | `HEALTH_CHECK_INTERVAL_MIN` | `30` | background diagnostics interval, `0` disables it |
 | `DATA_DIR` | `/data` | directory holding `shops.json`, `.encryption_key`, `stats.db` |
 | `PORT` | `8001` | HTTP server port |
-| `WB_TOOLSETS` | empty | comma-separated tool profiles: `pricing`, `ads`, `catalog`, `orders`, `analytics`, `feedback`, `finance`; empty means all 197 |
+| `WB_TOOLSETS` | empty | comma-separated tool profiles: `pricing`, `ads`, `catalog`, `orders`, `analytics`, `feedback`, `finance`; empty means all available read-only tools |
 | `WB_MAX_RESPONSE_CHARS` | `60000` | size-guard threshold for a single response |
 
 ## Wildberries API limits
@@ -582,7 +551,7 @@ wb-mcp-server/
 ├── DEPLOY.md                   # deploying to a dedicated machine, moving the data
 ├── docs/                       # client setup guides + tool reference
 └── wb_mcp/
-    ├── server.py       # MCP server: 197 tools, dispatch tables, stdio mode
+    ├── server.py       # MCP server: 143 read-only tools, dispatch tables, stdio mode
     ├── client.py       # HTTP clients for the 14 Wildberries APIs
     ├── app.py          # FastAPI: SSE + web UI + auth + health loop
     ├── diagnostics.py  # pings, JWT decoder, probes, API news
