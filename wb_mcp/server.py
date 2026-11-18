@@ -514,6 +514,10 @@ TOOLS = [
           ["date_from", "date_to"]),
 
     # === P1: АНАЛИТИКА ===
+    _tool("wb_analytics_order_feed",
+          "Read-only real-time analytics order/sales feed. Supports WB filters and snapshot pagination; max 31 days. POST is retrieval only.",
+          {"body": {"type": "object", "description": "WB OrderFeedReq: selectedPeriod{start,end}, nmIds, subjectIds, brandNames, tagIds, pagination{snapshotTime,offset,limit}"}},
+          ["body"]),
     _tool("wb_analytics_detail",
           "Sales funnel by product with full WB filters, comparison period, sorting and pagination. POST is retrieval only.",
           {"nm_ids": {"type": "array", "items": {"type": "integer"}},
@@ -910,6 +914,7 @@ async def _h_fbw_transit_tariffs(c, a): return await c.fbw_transit_tariffs()
 async def _h_paid_storage(c, a): return await c.analytics_paid_storage(a["date_from"], a["date_to"])
 
 # ── Аналитика ──
+async def _h_analytics_order_feed(c, a): return await c.analytics_order_feed(a["body"])
 async def _h_analytics_detail(c, a): return await c.analytics_sales_funnel(
     a["date_from"], a["date_to"], nm_ids=a.get("nm_ids"), brand_names=a.get("brand_names"),
     subject_ids=a.get("subject_ids"), tag_ids=a.get("tag_ids"), past_period=a.get("past_period"),
@@ -1091,6 +1096,7 @@ CLIENT_DISPATCH: dict[str, Any] = {
     # Платное хранение
     "wb_paid_storage": _h_paid_storage,
     # Аналитика
+    "wb_analytics_order_feed": _h_analytics_order_feed,
     "wb_analytics_detail": _h_analytics_detail,
     "wb_analytics_history": _h_analytics_history,
     "wb_analytics_stocks": _h_analytics_stocks,
