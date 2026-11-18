@@ -35,11 +35,11 @@ You: List new 5-star reviews and group them by product.
 
 ## What it can do
 
-**139 read-only Seller API tools.** The current catalogue is documented in [docs/tools.md](docs/tools.md).
+**139 read-only Seller API tools.** The current catalogue is documented in [docs/tools.md](docs/tools.md). Complete public WB Jam read-only API coverage is documented in [docs/wb-jam-api.md](docs/wb-jam-api.md).
 
 Coverage includes product cards and catalogues, prices and upload history, promotions calendar, advertising campaigns and statistics, FBS/DBS/click & collect orders, supplies and stock, finance reports, tariffs, reviews and questions, returns, read-only buyer chat access, documents, sales and search analytics.
 
-Extended **WB Джем (WB Jam)** analytics include the sales funnel, search queries, positions and clusters, detailed search reports and product-level analytics, subject to the Seller API methods and token permissions.
+Extended **WB Джем (WB Jam)** analytics include the sales funnel, search queries, positions and clusters, detailed search reports, product-level analytics and the complete documented CSV export workflow (create job, list status, retry failed job, download ZIP/CSV). See [docs/wb-jam-api.md](docs/wb-jam-api.md) for endpoint-by-endpoint coverage. Features available only inside the seller portal and not exposed by the public Seller API are explicitly listed as unsupported.
 
 Data mutation is removed at three levels: MCP tool catalogue, dispatch layer and HTTP client. There are no tools for changing cards, prices, discounts, ad bids, stock, orders, review replies or buyer messages. Some WB read endpoints use HTTP POST for retrieval; these remain available because the HTTP verb does not make them data mutations.
 
@@ -551,7 +551,7 @@ wb-mcp-server/
 ├── DEPLOY.md                   # deploying to a dedicated machine, moving the data
 ├── docs/                       # client setup guides + tool reference
 └── wb_mcp/
-    ├── server.py       # MCP server: 139 read-only tools, dispatch tables, stdio mode
+    ├── server.py       # MCP server: 142 read-only tools, dispatch tables, stdio mode
     ├── client.py       # HTTP clients for the 14 Wildberries APIs
     ├── app.py          # FastAPI: SSE + web UI + auth + health loop
     ├── diagnostics.py  # pings, JWT decoder, probes, API news
