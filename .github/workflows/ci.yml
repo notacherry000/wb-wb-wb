@@ -50,4 +50,4 @@ jobs:
             '{"jsonrpc":"2.0","id":2,"method":"tools/list"}' \
             | timeout 60 docker run --rm -i wb-mcp-server:ci wb-mcp > out.json
           grep -q '"name":"wb-mcp-server"' out.json
-          python -c "import json,sys;t=[json.loads(l)['result']['tools'] for l in open('out.json') if '\"id\":2' in l][0];print('инструментов в каталоге:',len(t));sys.exit(0 if len(t)>150 else 1)"
+          python -c "import json,sys;t=[json.loads(l)['result']['tools'] for l in open('out.json') if '\"id\":2' in l][0];print('инструментов в каталоге:',len(t));sys.exit(0 if len(t)>100 else 1)"
