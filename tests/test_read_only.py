@@ -3,7 +3,7 @@
 import inspect
 
 from wb_mcp import client as client_module
-from wb_mcp import server
+from wb_mcp import server, toolsets
 
 
 WRITE_TOOL_NAMES = {
@@ -124,6 +124,7 @@ def test_jam_csv_report_types_cover_documented_export_families():
 def test_jam_csv_report_tools_are_read_workflows_not_seller_mutations():
     client = client_module.WBClient
     for name in (
+        "analytics_order_feed",
         "analytics_csv_report_create",
         "analytics_csv_reports_list",
         "analytics_csv_report_retry",
@@ -150,3 +151,24 @@ def test_jam_tools_accept_complete_wb_request_bodies():
     groups = next(t for t in server.TOOLS if t.name == "wb_search_table_groups")
     assert "body" in details.inputSchema["properties"]
     assert "body" in groups.inputSchema["properties"]
+
+
+def test_all_jam_search_tools_belong_to_analytics_profile():
+    for name in (
+        "wb_jam_subscription",
+        "wb_search_report",
+        "wb_search_texts",
+        "wb_search_table_groups",
+        "wb_search_table_details",
+        "wb_search_product_orders",
+        "wb_analytics_order_feed",
+        "wb_analytics_detail",
+        "wb_analytics_history",
+        "wb_analytics_grouped_history",
+        "wb_analytics_csv_report_create",
+        "wb_analytics_csv_reports_list",
+        "wb_analytics_csv_report_retry",
+        "wb_analytics_csv_report_download",
+    ):
+        assert toolsets.profile_of(name) == "analytics", name
+    assert toolsets.profile_of("wb_advert_list") == "ads"
