@@ -189,7 +189,7 @@ claude mcp list      # expected: wildberries ... ✔ Connected
 ## Multi-store and security
 
 **Several seller accounts.** Stores are added on `/shops`; each one gets its own `shop_id`.
-`wb_list_shops` returns the list, and 200 of the 197 tools take `shop_id` as their first
+`wb_list_shops` returns the list, and 138 of the 139 tools take `shop_id` as their first
 parameter (the exceptions are `wb_list_shops` and `wb_degradations`).
 With a single store the parameter can be omitted — the server substitutes the only one available.
 
@@ -339,7 +339,7 @@ than estimated — `scripts/collect_corpus.py` takes a snapshot of read-only too
 (PII masked before anything is written to disk, the corpus stays out of the repo),
 `scripts/measure_corpus.py` reports what it costs.
 
-**Definitions.** 197 tools cost **17 700 tokens** with a single store configured,
+**Definitions.** The read-only catalogue now contains 139 tools; context usage depends on the active profile and client,
 down from 27 460. Descriptions are one sentence each, `shop_id` is dropped from the
 schemas when only one store exists (the server fills it in), and empty schema fields
 are not serialised.
@@ -403,7 +403,7 @@ whole — profiles are for them.
   prices and start ad campaigns.
 - **Dispatch through dictionaries, not an if-chain.** `NO_CLIENT_DISPATCH`,
   `CLIENT_DISPATCH` and `SHOP_DISPATCH` map names to handlers, and a test asserts that
-  every tool has one and no handler is orphaned. With 197 tools an if-chain rots quietly.
+  every tool has one and no handler is orphaned. With a large tool catalogue an if-chain rots quietly.
 - **The server diagnoses itself.** `wb_diagnostics` pings every WB host and runs a
   light real request per API category; `wb_degradations` reports which tools used to
   work and now fail steadily. Marketplace APIs change without notice — the question
@@ -480,7 +480,7 @@ Non-obvious details:
 | `HEALTH_CHECK_INTERVAL_MIN` | `30` | background diagnostics interval, `0` disables it |
 | `DATA_DIR` | `/data` | directory holding `shops.json`, `.encryption_key`, `stats.db` |
 | `PORT` | `8001` | HTTP server port |
-| `WB_TOOLSETS` | empty | comma-separated tool profiles: `pricing`, `ads`, `catalog`, `orders`, `analytics`, `feedback`, `finance`; empty means all 197 |
+| `WB_TOOLSETS` | empty | comma-separated tool profiles: `pricing`, `ads`, `catalog`, `orders`, `analytics`, `feedback`, `finance`; empty means all available read-only tools |
 | `WB_MAX_RESPONSE_CHARS` | `60000` | size-guard threshold for a single response |
 
 ## Wildberries API limits
@@ -551,7 +551,7 @@ wb-mcp-server/
 ├── DEPLOY.md                   # deploying to a dedicated machine, moving the data
 ├── docs/                       # client setup guides + tool reference
 └── wb_mcp/
-    ├── server.py       # MCP server: 197 tools, dispatch tables, stdio mode
+    ├── server.py       # MCP server: 139 read-only tools, dispatch tables, stdio mode
     ├── client.py       # HTTP clients for the 14 Wildberries APIs
     ├── app.py          # FastAPI: SSE + web UI + auth + health loop
     ├── diagnostics.py  # pings, JWT decoder, probes, API news
