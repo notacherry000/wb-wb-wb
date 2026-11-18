@@ -629,132 +629,17 @@ class WBClient:
 
     async def analytics_sales_funnel_history(
         self, nm_ids: list[int], date_from: str, date_to: str,
-        aggregation_level: str = "day",
+        aggregation_level: str = "day", skip_deleted_nm: bool = False,
     ) -> dict:
-        """POST /api/analytics/v3/sales-funnel/products/history — воронка по дням (максимум последняя неделя)."""
+        """POST /api/analytics/v3/sales-funnel/products/history — per-product daily/weekly history."""
+        if not 1 <= len(nm_ids) <= 20:
+            raise ValueError("nm_ids must contain 1..20 WB item IDs")
         return await self._post(self._analytics, "/api/analytics/v3/sales-funnel/products/history", {
             "selectedPeriod": {"start": date_from, "end": date_to},
             "nmIds": nm_ids,
             "aggregationLevel": aggregation_level,
+            "skipDeletedNm": skip_deleted_nm,
         })
-
-    async def _task_report_flow(self, create_path: str, params: dict, task_prefix: str) -> Any:
-        """Общий flow асинхронных отчётов: создать задание → дождаться → скачать."""
-        import asyncio as _aio
-        created = await self._get(self._analytics, create_path, params)
-        task_id = (created.get("data") or {}).get("taskId") or created.get("taskId")
-        if not task_id:
-            return created
-        for _ in range(24):  # до ~2 минут ожидания
-            await _aio.sleep(5)
-            status = await self._get(self._analytics, f"{task_prefix}/tasks/{task_id}/status")
-            st = (status.get("data") or {}).get("status") or status.get("status")
-            if st == "done":
-                return await self._get(self._analytics, f"{task_prefix}/tasks/{task_id}/download")
-            if st in ("canceled", "purged", "error"):
-                return {"task_id": task_id, "status": st, "error": "Задание не выполнено"}
-        return {"task_id": task_id, "status": "timeout",
-                "hint": f"Отчёт ещё готовится. Скачать позже: GET {task_prefix}/tasks/{task_id}/download"}
-
-    async def analytics_paid_storage(self, date_from: str, date_to: str) -> Any:
-        """GET /api/v1/paid_storage (task-based) — отчёт по платному хранению.
-
-        КРИТИЧНО: товары с нулевыми продажами и высокой стоимостью хранения = прямые убытки.
-        """
-        return await self._task_report_flow(
-            "/api/v1/paid_storage", {"dateFrom": date_from, "dateTo": date_to}, "/api/v1/paid_storage",
-        )
-
-    async def analytics_warehouse_remains(self, group_by_nm: bool = True) -> Any:
-        """GET /api/v1/warehouse_remains (task-based) — отчёт об остатках на складах WB."""
-        params = {"groupByNm": str(group_by_nm).lower(), "groupBySize": "false"}
-        return await self._task_report_flow(
-            "/api/v1/warehouse_remains", params, "/api/v1/warehouse_remains",
-        )
-
-    async def analytics_antifraud(self, date: str) -> dict:
-        """GET /api/v1/analytics/antifraud-details — удержания за самовыкупы (отчёт по средам)."""
-        return await self._get(self._analytics, "/api/v1/analytics/antifraud-details", {"date": date})
-
-    async def analytics_stocks_wb(self, nm_ids: list[int] | None = None,
-                                  limit: int = 1000, offset: int = 0) -> dict:
-        """POST /api/analytics/v1/stocks-report/wb-warehouses — ТЕКУЩИЕ остатки на складах WB.
-
-        Замена устаревшего statistics /api/v1/supplier/stocks (удаляется 23.06.2026).
-        Обновление раз в 30 мин. Лимит 3/мин.
-        """
-        body: dict[str, Any] = {"limit": limit, "offset": offset}
-        if nm_ids:
-            body["nmIds"] = nm_ids
-        return await self._post(self._analytics, "/api/analytics/v1/stocks-report/wb-warehouses", body)
-
-    async def analytics_stocks_report(self, date_from: str, date_to: str,
-                                      nm_ids: list[int] | None = None,
-                                      limit: int = 100, offset: int = 0) -> dict:
-        """POST /api/v2/stocks-report/products/products — интерактивный отчёт по остаткам и оборачиваемости."""
-        body: dict[str, Any] = {
-            "currentPeriod": {"start": date_from, "end": date_to},
-            "stockType": "", "skipDeletedNm": True,
-            "orderBy": {"field": "avgOrders", "mode": "desc"},
-            "availabilityFilters": ["actual", "balanced", "deficient", "nonActual", "nonLiquid", "invisible"],
-            "limit": limit, "offset": offset,
-        }
-        if nm_ids:
-            body["nmIDs"] = nm_ids
-        return await self._post(self._analytics, "/api/v2/stocks-report/products/products", body)
-
-    async def analytics_excise_report(self, date_from: str, date_to: str) -> dict:
-        """POST /api/v1/analytics/excise-report — отчёт по маркировке (Честный знак). Лимит 10 за 5 ч."""
-        return await self._post_with_params(self._analytics, "/api/v1/analytics/excise-report",
-                                            params={"dateFrom": date_from, "dateTo": date_to}, body={})
-
-    async def analytics_acceptance_report(self, date_from: str, date_to: str) -> Any:
-        """GET /api/v1/acceptance_report (task-based) — отчёт по платной приёмке."""
-        return await self._task_report_flow(
-            "/api/v1/acceptance_report", {"dateFrom": date_from, "dateTo": date_to}, "/api/v1/acceptance_report",
-        )
-
-    async def analytics_banned_products(self, shadowed: bool = False) -> dict:
-        """GET /api/v1/analytics/banned-products/{blocked|shadowed} — заблокированные/скрытые карточки.
-
-        КРИТИЧНО: заблокированные и скрытые из каталога товары = потерянные продажи.
-        """
-        path = "shadowed" if shadowed else "blocked"
-        return await self._get(self._analytics, f"/api/v1/analytics/banned-products/{path}",
-                               {"sort": "nmId", "order": "asc"})
-
-    async def analytics_goods_return(self, date_from: str, date_to: str) -> dict:
-        """GET /api/v1/analytics/goods-return — возвраты товаров продавцу (макс. 31 день)."""
-        return await self._get(self._analytics, "/api/v1/analytics/goods-return",
-                               {"dateFrom": date_from, "dateTo": date_to})
-
-    async def analytics_deductions(self, date_to: str, date_from: str,
-                                   limit: int = 100, offset: int = 0) -> dict:
-        """GET /api/analytics/v1/deductions — удержания за подмены и неверные вложения.
-
-        dateFrom обязателен, хотя в документации помечен опциональным: без него WB
-        отвечает 400 «invalid parameter: dateTo» — проверено на живом кабинете.
-        """
-        params: dict[str, Any] = {
-            "dateFrom": date_from, "dateTo": date_to, "limit": limit, "offset": offset,
-        }
-        return await self._get(self._analytics, "/api/analytics/v1/deductions", params)
-
-    async def search_report(self, body: dict[str, Any]) -> dict:
-        """POST /api/v2/search-report/report — full Jam search analytics main page."""
-        return await self._post(self._analytics, "/api/v2/search-report/report", body)
-
-    async def search_texts_by_product(self, body: dict[str, Any]) -> dict:
-        """POST /api/v2/search-report/product/search-texts — full Jam query analytics by product."""
-        return await self._post(self._analytics, "/api/v2/search-report/product/search-texts", body)
-
-    async def analytics_item_rating(self, nm_ids: list[int]) -> dict:
-        """POST /api/analytics/v1/item/rating — рейтинг товаров: просмотры, добавления в корзину, заказы.
-        [Джем] КРИТИЧНО: низкий рейтинг = проблема карточки или конкурент обошёл. Лимит ≤1000 nmID.
-        """
-        if len(nm_ids) > 1000:
-            nm_ids = nm_ids[:1000]
-        return await self._post(self._analytics, "/api/analytics/v1/item/rating", {"nmIds": nm_ids})
 
     async def analytics_sales_funnel_grouped_history(
         self, date_from: str, date_to: str,
