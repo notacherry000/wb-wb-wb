@@ -134,7 +134,7 @@
 - `wb_stats_orders`
 - `wb_stats_stocks`
 
-## Финансы и документы (11)
+## Финансы, профиль продавца и документы (13)
 
 - `wb_finance_report`
 - `wb_finance_reports_list`
@@ -143,6 +143,8 @@
 - `wb_finance_acquiring_detailed`
 - `wb_deductions`
 - `wb_finance_balance`
+- `wb_seller_info`
+- `wb_seller_rating`
 - `wb_documents_categories`
 - `wb_documents_list`
 - `wb_document_download`
