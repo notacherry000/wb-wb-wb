@@ -22,6 +22,7 @@
 
 | Метод WB | MCP-инструмент | Назначение |
 |---|---|---|
+| `POST /api/analytics/v1/order-feed` | `wb_analytics_order_feed` | Real-time order/sales feed, up to 31 days, snapshot pagination |
 | `POST /api/analytics/v3/sales-funnel/products` | `wb_analytics_detail` | Воронка по товарам за период, сравнение периодов, фильтры и пагинация |
 | `POST /api/analytics/v3/sales-funnel/products/history` | `wb_analytics_history` | История по товарам по дням/неделям, максимум последняя неделя |
 | `POST /api/analytics/v3/sales-funnel/grouped/history` | `wb_analytics_grouped_history` | История групп по предметам, брендам и ярлыкам |
