@@ -503,12 +503,6 @@ TOOLS = [
     # === ОТЗЫВЫ/ВОПРОСЫ: расширение ===
     _tool("wb_new_feedbacks_questions",
           "Flags for unseen feedbacks/questions: hasNewFeedbacks, hasNewQuestions (новые отзывы и вопросы)."),
-    _tool("wb_feedbacks_actions",
-          "Complain about a feedback or report a product problem, codes from supplier-valuations (жалоба на отзыв).",
-          {"feedback_id": {"type": "string"},
-           "feedback_valuation": {"type": "integer", "description": "complaint reason"},
-           "product_valuation": {"type": "integer", "description": "product problem"}},
-          ["feedback_id"]),
     _tool("wb_feedbacks_archive",
           "Archived feedbacks, previously answered, unlike wb_feedbacks_list (архив отзывов).",
           {"take": {"type": "integer", "default": 50}, "skip": {"type": "integer", "default": 0},
@@ -932,8 +926,6 @@ async def _h_search_product_orders(c, a): return await c.search_product_orders(
 
 # ── Отзывы/вопросы: расширение ──
 async def _h_new_feedbacks_questions(c, a): return await c.new_feedbacks_questions()
-async def _h_feedbacks_actions(c, a): return await c.feedbacks_actions(
-    a["feedback_id"], feedback_valuation=a.get("feedback_valuation"), product_valuation=a.get("product_valuation"))
 async def _h_feedbacks_archive(c, a): return await c.feedbacks_archive(take=a.get("take", 50), skip=a.get("skip", 0), nm_id=a.get("nm_id"))
 async def _h_feedbacks_pins(c, a): return await c.feedbacks_pins_list()
 async def _h_feedbacks_pins_count(c, a): return await c.feedbacks_pins_count()
@@ -1169,7 +1161,6 @@ CLIENT_DISPATCH: dict[str, Any] = {
     "wb_search_product_orders": _h_search_product_orders,
     # Отзывы/вопросы: расширение
     "wb_new_feedbacks_questions": _h_new_feedbacks_questions,
-    "wb_feedbacks_actions": _h_feedbacks_actions,
     "wb_feedbacks_archive": _h_feedbacks_archive,
     "wb_feedbacks_pins": _h_feedbacks_pins,
     "wb_feedbacks_pins_count": _h_feedbacks_pins_count,
